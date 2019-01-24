@@ -158,8 +158,8 @@ public class FrcMotionMagicController
 
         // Set the target pos to the required position and the target angle to 0
         // This target angle is NOT absolute heading. The motors were just zeroed, so it should maintain a current heading.
-        rightMaster.motor.set(ControlMode.MotionMagic, targetPos, DemandType.AuxPID, 0.0);
-        leftMaster.motor.follow(rightMaster.motor, FollowerType.AuxOutput1);
+        rightMaster.motor.set(ControlMode.MotionMagic, targetPos);
+        leftMaster.motor.follow(rightMaster.motor);
 
         running = true;
         cancelled = false;
@@ -303,7 +303,7 @@ public class FrcMotionMagicController
         {
             for (int i = 1; i < leftMotors.length; i++)
             {
-                leftMotors[i].motor.set(ControlMode.Follower, leftMaster.motor.getDeviceID());
+                leftMotors[i].motor.follow(leftMaster.motor);
             }
         }
     }
@@ -327,7 +327,7 @@ public class FrcMotionMagicController
         {
             for (int i = 1; i < rightMotors.length; i++)
             {
-                rightMotors[i].motor.set(ControlMode.Follower, rightMaster.motor.getDeviceID());
+                rightMotors[i].motor.follow(rightMaster.motor);
             }
         }
     }
@@ -361,7 +361,7 @@ public class FrcMotionMagicController
     {
         // Set the pid coefficients for the primary and auxiliary controllers
         configureCoefficients(rightMaster, pidCoefficients, 0);
-        configureCoefficients(rightMaster, turnPidCoefficients, 1);
+        // configureCoefficients(rightMaster, turnPidCoefficients, 1);
 
         rightMaster.motor.configAllowableClosedloopError(0, TrcUtil.round(errorTolerance), 0);
 
@@ -378,22 +378,9 @@ public class FrcMotionMagicController
         rightMaster.motor.configSensorTerm(SensorTerm.Sum0, FeedbackDevice.RemoteSensor0, 0);
         rightMaster.motor.configSensorTerm(SensorTerm.Sum1, rightMaster.getFeedbackDevice(), 0);
 
-        // Configure the remote sensor and local sensor to be subtracted
-        // We operate in clockwise rotation so it's inverted polarity
-        rightMaster.motor.configSensorTerm(SensorTerm.Diff0, FeedbackDevice.RemoteSensor0, 0);
-        rightMaster.motor.configSensorTerm(SensorTerm.Diff1, rightMaster.getFeedbackDevice(), 0);
-
         // Multiply the sum by 0.5. (basically average the sensor readings) Use the average in slot 0
         rightMaster.motor.configSelectedFeedbackSensor(FeedbackDevice.SensorSum, 0, 0);
         rightMaster.motor.configSelectedFeedbackCoefficient(0.5, 0, 0);
-
-        // TODO: Maybe have to scale it by some amount so it fits into integers? (Possibly set a feedback coefficient)
-        // Use the differences in sensor readings in slot 1
-        // The old feedback sensor is restored after the motion magic finishes
-        rightMaster.motor.configSelectedFeedbackSensor(FeedbackDevice.SensorDifference, 1, 0);
-
-        // Configure the polarity of the controllers. Since we use clockwise rotation, we use inverted polarity.
-        rightMaster.motor.configAuxPIDPolarity(true, 0);
 
         // Zero the encoders
         leftMaster.motor.setSelectedSensorPosition(0, 0, 0);
