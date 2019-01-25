@@ -77,7 +77,7 @@ public class FrcMotionMagicController
     private int maxAcceleration;
 
     /**
-     * Creates a motion magic controller with a default pid slot of 0.
+     * Creates a motion magic controller.
      *
      * @param instanceName      The name of this instance.
      * @param worldUnitsPerTick The number of world units per encoder tick. This can be inches/tick, cm/tick, etc.
