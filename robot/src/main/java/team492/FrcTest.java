@@ -40,7 +40,7 @@ public class FrcTest extends FrcTeleOp
 
     public enum Test
     {
-        SENSORS_TEST, SUBSYSTEMS_TEST, MOTION_MAGIC_TEST, DRIVE_MOTORS_TEST, X_TIMED_DRIVE, Y_TIMED_DRIVE, X_DISTANCE_DRIVE, Y_DISTANCE_DRIVE, TURN_DEGREES, TUNE_X_PID, TUNE_Y_PID, TUNE_TURN_PID, LIVE_WINDOW
+        SENSORS_TEST, SUBSYSTEMS_TEST, MOTION_MAGIC_TEST, MOTION_MAGIC_ROT_TEST, DRIVE_MOTORS_TEST, X_TIMED_DRIVE, Y_TIMED_DRIVE, X_DISTANCE_DRIVE, Y_DISTANCE_DRIVE, TURN_DEGREES, TUNE_X_PID, TUNE_Y_PID, TUNE_TURN_PID, LIVE_WINDOW
     } // enum Test
 
     private enum State
@@ -61,6 +61,7 @@ public class FrcTest extends FrcTeleOp
     private CmdTimedDrive timedDriveCommand = null;
     private CmdPidDrive pidDriveCommand = null;
     private MotionMagicTest motionMagicTest;
+    private MotionMagicRotTest motionMagicRotTest;
 
     private int motorIndex = 0;
 
@@ -72,6 +73,7 @@ public class FrcTest extends FrcTeleOp
         super(robot);
 
         motionMagicTest = new MotionMagicTest(robot);
+        motionMagicRotTest = new MotionMagicRotTest(robot);
 
         event = new TrcEvent(moduleName);
         timer = new TrcTimer(moduleName);
@@ -84,6 +86,7 @@ public class FrcTest extends FrcTeleOp
         testMenu.addChoice("Sensors Test", FrcTest.Test.SENSORS_TEST, true, false);
         testMenu.addChoice("Subsystems Test", FrcTest.Test.SUBSYSTEMS_TEST);
         testMenu.addChoice("Motion Magic", Test.MOTION_MAGIC_TEST);
+        testMenu.addChoice("Motion Magic Rot", Test.MOTION_MAGIC_ROT_TEST);
         testMenu.addChoice("Drive Motors Test", FrcTest.Test.DRIVE_MOTORS_TEST);
         testMenu.addChoice("X Timed Drive", FrcTest.Test.X_TIMED_DRIVE);
         testMenu.addChoice("Y Timed Drive", FrcTest.Test.Y_TIMED_DRIVE);
@@ -120,6 +123,10 @@ public class FrcTest extends FrcTeleOp
         {
             case MOTION_MAGIC_TEST:
                 motionMagicTest.start(HalDashboard.getNumber("Test/DriveDistance", 0.0));
+                break;
+
+            case MOTION_MAGIC_ROT_TEST:
+                motionMagicRotTest.start();
                 break;
 
             case SENSORS_TEST:
@@ -221,6 +228,14 @@ public class FrcTest extends FrcTeleOp
     {
         switch (test)
         {
+            case MOTION_MAGIC_TEST:
+                motionMagicTest.cmdPeriodic(elapsedTime);
+                break;
+
+            case MOTION_MAGIC_ROT_TEST:
+                motionMagicRotTest.cmdPeriodic(elapsedTime);
+                break;
+
             case SENSORS_TEST:
                 super.runContinuous(elapsedTime);
                 break;
@@ -274,6 +289,10 @@ public class FrcTest extends FrcTeleOp
         {
             case MOTION_MAGIC_TEST:
                 motionMagicTest.stop();
+                break;
+
+            case MOTION_MAGIC_ROT_TEST:
+                motionMagicRotTest.stop();
                 break;
 
             default:

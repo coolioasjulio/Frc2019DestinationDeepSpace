@@ -32,14 +32,7 @@ import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Sendable;
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
-import frclib.FrcAHRSGyro;
-import frclib.FrcCANTalon;
-import frclib.FrcEmic2TextToSpeech;
-import frclib.FrcI2cLEDPanel;
-import frclib.FrcJoystick;
-import frclib.FrcPdp;
-import frclib.FrcRobotBase;
-import frclib.FrcRobotBattery;
+import frclib.*;
 import hallib.HalDashboard;
 import team492.PixyVision.TargetInfo;
 import trclib.TrcEmic2TextToSpeech.Voice;
@@ -66,6 +59,7 @@ public class Robot extends FrcRobotBase
 
     public static final boolean USE_TRACELOG = true;
     public static final boolean USE_NAV_X = true;
+    public static final boolean USE_PIGEON = true;
     public static final boolean USE_TEXT_TO_SPEECH = false;
     public static final boolean USE_MESSAGE_BOARD = false;
     public static final boolean USE_GYRO_ASSIST = false;
@@ -116,6 +110,7 @@ public class Robot extends FrcRobotBase
     public TrcRobotBattery battery = null;
     public FrcAHRSGyro gyro = null;
     public AnalogInput pressureSensor = null;
+    public FrcPigeonIMU pigeon = null;
     //
     // VisionTargetPipeline subsystem.
     //
@@ -177,6 +172,10 @@ public class Robot extends FrcRobotBase
         if (USE_NAV_X)
         {
             gyro = new FrcAHRSGyro("NavX", SPI.Port.kMXP);
+        }
+        if(USE_PIGEON)
+        {
+            pigeon = new FrcPigeonIMU("Pigeon", RobotInfo.CANID_PIGEON_IMU);
         }
         pressureSensor = new AnalogInput(RobotInfo.AIN_PRESSURE_SENSOR);
 
