@@ -62,7 +62,7 @@ public class MotionMagicTest implements TrcRobot.RobotCommand
     {
         driveDistance = distance;
         startTime = TrcUtil.getCurrentTime();
-        robot.globalTracer.traceInfo("MotionMagicTest.start", "Started! Time: %.3f", startTime);
+        robot.globalTracer.traceInfo("MotionMagicTest.start", "Started! Dist: %.2f, Time: %.3f", distance, startTime);
         motionMagic.drive(distance, event);
 
         if (WRITE_CSV)
@@ -117,6 +117,7 @@ public class MotionMagicTest implements TrcRobot.RobotCommand
 
         if (motionMagic.isRunning())
         {
+            robot.dashboard.displayPrintf(15,"YDist: %.2f", robot.driveBase.getYPosition());
             fileOut.printf("%.3f,%.2f,%.2f,%.2f,%.2f,%.2f\n", elapsedTime, motionMagic.getError(),
                 robot.leftFrontWheel.motor.getSelectedSensorPosition(0) * WORLD_UNITS_PER_TICK,
                 robot.rightFrontWheel.motor.getSelectedSensorPosition(0) * WORLD_UNITS_PER_TICK,

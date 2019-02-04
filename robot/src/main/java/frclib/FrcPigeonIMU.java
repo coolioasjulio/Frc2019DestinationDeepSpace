@@ -8,13 +8,19 @@ import trclib.TrcUtil;
 
 public class FrcPigeonIMU extends TrcGyro
 {
-    private PigeonIMU pigeon;
+    public PigeonIMU pigeon;
     private double[] ypr = new double[3];
 
     public FrcPigeonIMU(String instanceName, int id)
     {
         super(instanceName, 3, GYRO_HAS_X_AXIS | GYRO_HAS_Y_AXIS | GYRO_HAS_Z_AXIS);
         pigeon = new PigeonIMU(id);
+    }
+
+    public FrcPigeonIMU(String instanceName, FrcCANTalon talon)
+    {
+        super(instanceName, 3, GYRO_HAS_X_AXIS | GYRO_HAS_Y_AXIS | GYRO_HAS_Z_AXIS);
+        pigeon = new PigeonIMU(talon.motor);
     }
 
     @Override
@@ -29,7 +35,7 @@ public class FrcPigeonIMU extends TrcGyro
             case ROTATION_RATE:
                 double[] rates = new double[3];
                 pigeon.getRawGyro(rates);
-                return new SensorData<>(time, rates[1]);
+                return new SensorData<>(time, rates[0]);
 
             default:
                 throw new UnsupportedOperationException("Unsupported data type!");
@@ -48,7 +54,7 @@ public class FrcPigeonIMU extends TrcGyro
             case ROTATION_RATE:
                 double[] rates = new double[3];
                 pigeon.getRawGyro(rates);
-                return new SensorData<>(time, rates[2]);
+                return new SensorData<>(time, rates[1]);
 
             default:
                 throw new UnsupportedOperationException("Unsupported data type!");
@@ -67,7 +73,7 @@ public class FrcPigeonIMU extends TrcGyro
             case ROTATION_RATE:
                 double[] rates = new double[3];
                 pigeon.getRawGyro(rates);
-                return new SensorData<>(time, rates[0]);
+                return new SensorData<>(time, rates[2]);
 
             default:
                 throw new UnsupportedOperationException("Unsupported data type!");

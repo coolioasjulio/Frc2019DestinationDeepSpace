@@ -23,6 +23,8 @@
 package team492;
 
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import com.ctre.phoenix.motorcontrol.RemoteFeedbackDevice;
+import com.ctre.phoenix.motorcontrol.RemoteSensorSource;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -60,6 +62,7 @@ public class Robot extends FrcRobotBase
     public static final boolean USE_TRACELOG = true;
     public static final boolean USE_NAV_X = true;
     public static final boolean USE_PIGEON = true;
+    public static final boolean PIGEON_CAN = false; // If true, use can. If false, use gadgeteer
     public static final boolean USE_TEXT_TO_SPEECH = false;
     public static final boolean USE_MESSAGE_BOARD = false;
     public static final boolean USE_GYRO_ASSIST = false;
@@ -111,6 +114,7 @@ public class Robot extends FrcRobotBase
     public FrcAHRSGyro gyro = null;
     public AnalogInput pressureSensor = null;
     public FrcPigeonIMU pigeon = null;
+    public FrcCANTalon pigeonTalon = null;
     //
     // VisionTargetPipeline subsystem.
     //
@@ -175,7 +179,16 @@ public class Robot extends FrcRobotBase
         }
         if(USE_PIGEON)
         {
-            pigeon = new FrcPigeonIMU("Pigeon", RobotInfo.CANID_PIGEON_IMU);
+            if (PIGEON_CAN)
+            {
+                pigeon = new FrcPigeonIMU("Pigeon", RobotInfo.CANID_PIGEON_IMU);
+            }
+            else
+            {
+                pigeonTalon = new FrcCANTalon("PigeonTalon", RobotInfo.CANID_PIGEON_TALON);
+                pigeon = new FrcPigeonIMU("Pigeon", pigeonTalon);
+            }
+            pigeon.pigeon.setYaw(0.0);
         }
         pressureSensor = new AnalogInput(RobotInfo.AIN_PRESSURE_SENSOR);
 

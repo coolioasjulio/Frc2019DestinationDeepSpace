@@ -30,6 +30,7 @@ import frclib.FrcJoystick;
 import hallib.HalDashboard;
 import team492.PixyVision.TargetInfo;
 import trclib.TrcEvent;
+import trclib.TrcGyro;
 import trclib.TrcRobot.RunMode;
 import trclib.TrcStateMachine;
 import trclib.TrcTimer;
@@ -62,6 +63,7 @@ public class FrcTest extends FrcTeleOp
     private CmdPidDrive pidDriveCommand = null;
     private MotionMagicTest motionMagicTest;
     private MotionMagicRotTest motionMagicRotTest;
+    private double maxRotRate = 0;
 
     private int motorIndex = 0;
 
@@ -370,19 +372,22 @@ public class FrcTest extends FrcTeleOp
                 driveBaseAverage);
         robot.dashboard
             .displayPrintf(3, "DriveBase: X=%.1f,Y=%.1f,Heading=%.1f,GyroRate=%.3f", robot.driveBase.getXPosition(),
-                robot.driveBase.getYPosition(), robot.driveBase.getHeading(), robot.gyro.getZRotationRate().value);
-        robot.dashboard.displayPrintf(4, "Sensors: pressure=%.1f", robot.getPressure());
-        TargetInfo targetInfo = robot.pixy.getTargetInfo();
-        if (targetInfo == null)
-        {
-            robot.dashboard.displayPrintf(6, "Pixy: target not found");
-        }
-        else
-        {
-            robot.dashboard
-                .displayPrintf(6, "Pixy: x=%.1f,y=%.1f,angle=%.1f", targetInfo.xDistance, targetInfo.yDistance,
-                    targetInfo.angle);
-        }
+                robot.driveBase.getYPosition(), robot.pigeon.getYaw(), robot.gyro.getZRotationRate().value);
+        maxRotRate = Math.max(robot.pigeon.getRawZData(TrcGyro.DataType.ROTATION_RATE).value, maxRotRate);
+        robot.dashboard.displayPrintf(4, "Max rotation rate: %.3f", maxRotRate);
+
+        //robot.dashboard.displayPrintf(4, "Sensors: pressure=%.1f", robot.getPressure());
+//        TargetInfo targetInfo = robot.pixy.getTargetInfo();
+//        if (targetInfo == null)
+//        {
+//            robot.dashboard.displayPrintf(6, "Pixy: target not found");
+//        }
+//        else
+//        {
+//            robot.dashboard
+//                .displayPrintf(6, "Pixy: x=%.1f,y=%.1f,angle=%.1f", targetInfo.xDistance, targetInfo.yDistance,
+//                    targetInfo.angle);
+//        }
         double lfSpeed = robot.leftFrontWheel.getVelocity();
         double rfSpeed = robot.rightFrontWheel.getVelocity();
         double lrSpeed = robot.leftRearWheel.getVelocity();

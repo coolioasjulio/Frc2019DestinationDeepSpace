@@ -1,5 +1,6 @@
 package team492;
 
+import com.ctre.phoenix.sensors.PigeonIMU;
 import frclib.FrcMotionMagicRotationController;
 import hallib.HalDashboard;
 import trclib.TrcEvent;
@@ -16,13 +17,13 @@ import java.util.Date;
 
 public class MotionMagicRotTest implements TrcRobot.RobotCommand
 {
-    private static final double kP = 0.02;
+    private static final double kP = 0.4551;
     private static final double kI = 0.0;
-    private static final double kD = 0.00175;
-    private static final double kF = 1.131266385; // TODO: Calculate this according to Phoenix docs
+    private static final double kD = 0.039822;
+    private static final double kF = 1.9298;
 
-    private static final double MAX_SPEED = 372; // deg/sec
-    private static final double MAX_ACCEL = 300; // deg/sec^2
+    private static final double MAX_SPEED = 1000; // deg/sec
+    private static final double MAX_ACCEL = 400; // deg/sec^2
 
     private static final boolean WRITE_CSV = true;
 
@@ -38,8 +39,8 @@ public class MotionMagicRotTest implements TrcRobot.RobotCommand
         this.robot = robot;
         TrcPidController.PidCoefficients pidCoefficients = new TrcPidController.PidCoefficients(kP, kI, kD, kF);
         this.motionMagic = new FrcMotionMagicRotationController("MotionMagic", pidCoefficients, robot.pigeon, MAX_SPEED,
-            MAX_ACCEL, 2.0);
-        motionMagic.setAutoTimeoutEnabled(true, 1.5);
+            MAX_ACCEL, 2.0, true);
+        motionMagic.setAutoTimeoutEnabled(false);
         motionMagic.setLeftMotors(robot.leftFrontWheel, robot.leftRearWheel);
         motionMagic.setRightMotors(robot.rightFrontWheel, robot.rightRearWheel);
 
@@ -112,11 +113,11 @@ public class MotionMagicRotTest implements TrcRobot.RobotCommand
 
         if (motionMagic.isRunning() && fileOut != null)
         {
-            fileOut.printf("%.3f,%.2f,%d,%d,%.2f,%.2f\n", elapsedTime, motionMagic.getError(),
-                robot.leftFrontWheel.motor.getSelectedSensorPosition(0),
-                robot.rightFrontWheel.motor.getSelectedSensorPosition(0),
-                robot.leftFrontWheel.getVelocity(),
-                robot.rightFrontWheel.getVelocity());
+            String message = String
+                .format("%.3f,%.2f,%.2f,%.2f", elapsedTime, motionMagic.getError(), robot.pigeon.getYaw(),
+                    motionMagic.getTargetAngle());
+            robot.globalTracer.traceInfo("cmdPeriodic", message);
+            fileOut.println(message);
         }
         return false;
     }

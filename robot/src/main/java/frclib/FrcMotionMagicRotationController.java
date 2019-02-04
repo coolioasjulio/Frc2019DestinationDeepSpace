@@ -36,24 +36,27 @@ public class FrcMotionMagicRotationController
     private double timeoutTime;
     private boolean autoTimeout = false;
     private double fudgeFactor = 1.0;
-    private FrcPigeonIMU pigeon;
+    private FrcPigeonIMU pigeon = null;
+    private boolean gadgeteer = false;
     private boolean leftInverted;
     private FrcCANTalon[] leftMotors;
+    private FrcCANTalon[] rightMotors;
     private TrcWarpSpace warpSpace;
+    private double degreesPerUnit = 360.0 / 8192.0;
     /**
-     * Degrees.
+     * Units.
      */
     private double errorTolerance;
     /**
-     * Degrees.
+     * Units.
      */
     private double targetAngle;
     /**
-     * Degrees per 100ms.
+     * Units per 100ms.
      */
     private int maxRotVelocity;
     /**
-     * Degrees per 100ms per second. Yeah I know it's gross.
+     * Units per 100ms per second. Yeah I know it's gross.
      */
     private int maxRotAcceleration;
 
@@ -62,26 +65,28 @@ public class FrcMotionMagicRotationController
      *
      * @param instanceName       The name of this instance.
      * @param pidCoefficients    The PIDF coefficients to use for the drivetrain.
-     * @param pigeon             The PigeonIMU connected through the CAN bus.
+     * @param pigeon             The PigeonIMU gyro.
      * @param maxRotVelocity     The maximum speed the robot should go during a move operation.
      *                           The robot may not reach this speed. This should be in world units per second.
      * @param maxRotAcceleration The maximum acceleration of the robot during a move operation.
      *                           The robot may not reach this acceleration. This should be in world units per second per second.
      * @param errorTolerance     The tolerance of error, in world units. If the closed loop error is less than or equal to
      *                           the tolerance, the move operation will be finished.
+     * @param gadgeteer          True if connected via a gadgeteer cable to a talonSRX. False if connected to the CAN bus.
      */
     public FrcMotionMagicRotationController(String instanceName, TrcPidController.PidCoefficients pidCoefficients,
-        FrcPigeonIMU pigeon, double maxRotVelocity, double maxRotAcceleration, double errorTolerance)
+        FrcPigeonIMU pigeon, double maxRotVelocity, double maxRotAcceleration, double errorTolerance, boolean gadgeteer)
     {
         this.pidCoefficients = pidCoefficients;
         this.pigeon = pigeon;
-        this.errorTolerance = Math.abs(errorTolerance);
+        this.gadgeteer = gadgeteer;
+        this.errorTolerance = Math.abs(errorTolerance) / degreesPerUnit;
         // Scale velocity and acceleration to encoder units and time frame of 100ms
-        this.maxRotVelocity = TrcUtil.round(0.1 * maxRotVelocity);
+        this.maxRotVelocity = TrcUtil.round(0.1 * maxRotVelocity / degreesPerUnit);
         // For some reason CTRE is dumb, so acceleration is ticks/100ms/1sec. God I hate these people.
-        this.maxRotAcceleration = TrcUtil.round(0.1 * maxRotAcceleration);
+        this.maxRotAcceleration = TrcUtil.round(0.1 * maxRotAcceleration / degreesPerUnit);
 
-        warpSpace = new TrcWarpSpace("MotionMagicWarpSpace", 0.0, 360.0);
+        warpSpace = new TrcWarpSpace("MotionMagicWarpSpace", 0.0, 360 / degreesPerUnit);
 
         this.motionMagicTaskObj = TrcTaskMgr.getInstance().createTask(instanceName, this::motionMagicTask);
     }
@@ -125,7 +130,7 @@ public class FrcMotionMagicRotationController
         this.timeoutTime = TrcUtil.getCurrentTime() + timeout;
 
         // Optimize the target angle
-        this.targetAngle = warpSpace.getOptimizedTarget(targetAngle, pigeon.getYaw());
+        this.targetAngle = warpSpace.getOptimizedTarget(targetAngle / degreesPerUnit, pigeon.getYaw() / degreesPerUnit);
 
         if (onFinishedEvent != null)
         {
@@ -136,11 +141,18 @@ public class FrcMotionMagicRotationController
         talonInit();
 
         // Set the target angle, and the left motors to follow
-        rightMaster.motor.set(ControlMode.MotionMagic, targetAngle);
         for (FrcCANTalon talon : leftMotors)
         {
             talon.motor.follow(rightMaster.motor);
         }
+        if (rightMotors.length > 1)
+        {
+            for (int i = 1; i < rightMotors.length; i++)
+            {
+                rightMotors[i].motor.follow(rightMaster.motor);
+            }
+        }
+        rightMaster.motor.set(ControlMode.MotionMagic, targetAngle);
 
         running = true;
         cancelled = false;
@@ -160,20 +172,21 @@ public class FrcMotionMagicRotationController
         leftInverted = leftMotors[0].getInverted();
         for (FrcCANTalon talon : leftMotors)
         {
-            talon.motor.setInverted(InvertType.FollowMaster);
+            talon.motor.setInverted(rightMaster.motor.getInverted());
         }
 
-        rightMaster.motor.configAllowableClosedloopError(0, TrcUtil.round(errorTolerance), 0);
+        rightMaster.motor.configAllowableClosedloopError(0, TrcUtil.round(errorTolerance), 10);
 
         // Set the motion magic velocity and acceleration constraints
-        rightMaster.motor.configMotionCruiseVelocity(maxRotVelocity, 0);
-        rightMaster.motor.configMotionAcceleration(maxRotAcceleration, 0);
+        rightMaster.motor.configMotionCruiseVelocity(maxRotVelocity, 10);
+        rightMaster.motor.configMotionAcceleration(maxRotAcceleration, 10);
 
         // Add the pigeon IMU as a remote sensor
-        rightMaster.motor.configRemoteFeedbackFilter(pigeon.getDeviceID(), RemoteSensorSource.Pigeon_Yaw, 0);
+        rightMaster.motor.configRemoteFeedbackFilter(pigeon.getDeviceID(),
+            gadgeteer ? RemoteSensorSource.GadgeteerPigeon_Yaw : RemoteSensorSource.Pigeon_Yaw, 0);
 
         // Register the gyro as the selected sensor
-        rightMaster.motor.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0, 0, 0);
+        rightMaster.motor.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0, 0, 10);
     }
 
     /**
@@ -290,24 +303,28 @@ public class FrcMotionMagicRotationController
         }
 
         this.rightMaster = rightMotors[0];
+        this.rightMotors = rightMotors;
+    }
 
-        if (rightMotors.length > 1)
-        {
-            for (int i = 1; i < rightMotors.length; i++)
-            {
-                rightMotors[i].motor.follow(rightMaster.motor);
-            }
-        }
+    public double getTargetAngle()
+    {
+        return rightMaster.motor.getClosedLoopTarget() * degreesPerUnit;
     }
 
     public double getError()
     {
-        return targetAngle - rightMaster.motor.getSelectedSensorPosition();
+        return getRawError() * degreesPerUnit;
+    }
+
+    private double getRawError()
+    {
+        return rightMaster.motor.getClosedLoopError();
+        //return targetAngle - rightMaster.motor.getSelectedSensorPosition();
     }
 
     private boolean isDone()
     {
-        return running && Math.abs(getError()) <= errorTolerance;
+        return running && Math.abs(getRawError()) <= errorTolerance;
     }
 
     private void stop()
