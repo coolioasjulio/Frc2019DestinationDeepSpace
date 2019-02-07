@@ -282,6 +282,7 @@ public class Robot extends FrcRobotBase
             driveBase::getHeading);
         gyroTurnPidCtrl.setAbsoluteSetPoint(true);
         pidDrive = new TrcPidDrive("pidDrive", driveBase, encoderXPidCtrl, encoderYPidCtrl, gyroTurnPidCtrl);
+        pidDrive.setFixedAxisDrivingEnabled(true);
         pidDrive.setStallTimeout(RobotInfo.DRIVE_STALL_TIMEOUT);
         pidDrive.setMsgTracer(globalTracer);
 

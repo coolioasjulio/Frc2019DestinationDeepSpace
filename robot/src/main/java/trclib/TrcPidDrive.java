@@ -102,6 +102,8 @@ public class TrcPidDrive
     private boolean turnOnly = false;
     private boolean maintainHeading = false;
     private boolean canceled = false;
+    private double startHeading = 0.0;
+    private boolean fixedAxisDriving = false;
 
     /**
      * Constructor: Create an instance of the object.
@@ -371,6 +373,15 @@ public class TrcPidDrive
         this.stallTimeout = stallTimeout;
     }   //setStallTimeout
 
+    public void setFixedAxisDrivingEnabled(boolean enabled)
+    {
+        if (!driveBase.supportsHolonomicDrive())
+        {
+            throw new IllegalStateException("Cannot use fixed axis driving with non-holonomic drive bases!");
+        }
+        this.fixedAxisDriving = enabled;
+    }
+
     /**
      * This method starts a PID operation by setting the PID targets.
      *
@@ -407,6 +418,7 @@ public class TrcPidDrive
 
         if (turnPidCtrl != null)
         {
+            startHeading = fixedAxisDriving ? driveBase.getHeading() : 0.0;
             turnPidCtrl.setTarget(turnTarget, warpSpaceEnabled? warpSpace: null);
         }
 
@@ -757,7 +769,8 @@ public class TrcPidDrive
         }
         else if (xPidCtrl != null)
         {
-            driveBase.holonomicDrive(xPower, yPower, turnPower, false, 0.0);
+            double gyroAngle = fixedAxisDriving ? driveBase.getHeading() - startHeading : 0.0;
+            driveBase.holonomicDrive(xPower, yPower, turnPower, false, gyroAngle);
         }
         else if (turnMode == TurnMode.IN_PLACE)
         {
