@@ -42,15 +42,15 @@ public class RemoteSwerve
     private double xPos, yPos, heading;
     private Double lastTime;
 
-    public RemoteSwerve(double width, double length)
+    public RemoteSwerve(double width, double length, TrcGyro gyro)
     {
         TrcTaskMgr.getInstance();
 
         TrcPidController.PidCoefficients pidCoefficients = new TrcPidController.PidCoefficients(0.02);
         double turnTolerance = 1;
 
-        gyro = new MockGyro("Gyro");
-        model = new SwerveModel(length, width);
+        this.gyro = gyro;
+        model = new SwerveModel(length, width, gyro);
 
         lastTime = null;
         xPos = 0.0;

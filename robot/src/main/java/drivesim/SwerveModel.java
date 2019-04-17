@@ -12,6 +12,7 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.Pair;
+import trclib.TrcGyro;
 
 import java.util.Arrays;
 
@@ -21,12 +22,14 @@ public class SwerveModel implements MultivariateJacobianFunction
     private static final double DIFF_DIST = 1e-8;
 
     private double wheelBaseLength, wheelBaseWidth, wheelBaseDiagonal;
+    private TrcGyro gyro;
 
-    public SwerveModel(double wheelBaseLength, double wheelBaseWidth)
+    public SwerveModel(double wheelBaseLength, double wheelBaseWidth, TrcGyro gyro)
     {
         this.wheelBaseWidth = wheelBaseWidth;
         this.wheelBaseLength = wheelBaseLength;
         wheelBaseDiagonal = magnitude(wheelBaseWidth, wheelBaseLength);
+        this.gyro = gyro;
     }
 
     public double[] getRobotVelocity(double... observationArr)
@@ -53,7 +56,7 @@ public class SwerveModel implements MultivariateJacobianFunction
             }
         }
         RealVector observation = new ArrayRealVector(observationArr);
-        RealVector guess = new ArrayRealVector(new double[] { 1, 1, 1 });
+        RealVector guess = new ArrayRealVector(new double[] { 1, 1, Math.toRadians(gyro.getRawZData(TrcGyro.DataType.ROTATION_RATE).value) });
         LeastSquaresProblem leastSquaresProblem = LeastSquaresFactory
             .create(this, observation, guess, null, 2000, 800);
         LeastSquaresOptimizer optimizer = new LevenbergMarquardtOptimizer();

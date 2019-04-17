@@ -5,10 +5,24 @@ import trclib.TrcUtil;
 
 public class MockGyro extends TrcGyro
 {
+    private double heading;
+    private double rotationalVelocity;
+    private Double lastTime;
+
     public MockGyro(String instanceName)
     {
-        super(instanceName, 3,
-            TrcGyro.GYRO_HAS_X_AXIS | TrcGyro.GYRO_HAS_Y_AXIS | TrcGyro.GYRO_HAS_Z_AXIS);
+        super(instanceName, 3, TrcGyro.GYRO_HAS_X_AXIS | TrcGyro.GYRO_HAS_Y_AXIS | TrcGyro.GYRO_HAS_Z_AXIS);
+    }
+
+    public void setHeading(double heading)
+    {
+        double currTime = TrcUtil.getCurrentTime();
+        if (lastTime != null)
+        {
+            rotationalVelocity = (heading - this.heading) / (currTime - lastTime);
+        }
+        lastTime = currTime;
+        this.heading = heading;
     }
 
     @Override
@@ -26,6 +40,6 @@ public class MockGyro extends TrcGyro
     @Override
     public SensorData<Double> getRawZData(DataType dataType)
     {
-        return new SensorData<>(TrcUtil.getCurrentTime(), 0.0);
+        return new SensorData<>(TrcUtil.getCurrentTime(), dataType == DataType.HEADING ? heading : rotationalVelocity);
     }
 }
