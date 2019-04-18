@@ -56,15 +56,15 @@ public class SwerveModel implements MultivariateJacobianFunction
             }
         }
         RealVector observation = new ArrayRealVector(observationArr);
-        RealVector guess = new ArrayRealVector(new double[] { 1, 1, Math.toRadians(gyro.getRawZData(TrcGyro.DataType.ROTATION_RATE).value) });
+        RealVector guess = new ArrayRealVector(new double[] { 1, 1, 1 });
         LeastSquaresProblem leastSquaresProblem = LeastSquaresFactory
             .create(this, observation, guess, null, 2000, 800);
         LeastSquaresOptimizer optimizer = new LevenbergMarquardtOptimizer();
         try
         {
             LeastSquaresOptimizer.Optimum optimum = optimizer.optimize(leastSquaresProblem);
-            System.out.printf("Optimized with cost %.3f! {nIters: %d, nEvals: %d}\n", optimum.getRMS(),
-                optimum.getIterations(), optimum.getEvaluations());
+//            System.out.printf("Optimized with cost %.3f! {nIters: %d, nEvals: %d}\n", optimum.getRMS(),
+//                optimum.getIterations(), optimum.getEvaluations());
             return optimum.getPoint().toArray();
         }
         catch (TooManyEvaluationsException | TooManyIterationsException e)

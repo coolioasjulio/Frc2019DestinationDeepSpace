@@ -19,14 +19,28 @@ public class RemoteSwerve
 {
     public static void main(String[] args)
     {
-        try {
-            ServerSocket serverSocket = new ServerSocket(4444);
-            System.out.println("Waiting for connection...");
-            Socket socket = serverSocket.accept();
-            System.out.println("Received connection from " + socket.getInetAddress().toString());
+        try (ServerSocket serverSocket = new ServerSocket(4444))
+        {
+            while (true)
+            {
+                System.out.println("Waiting for connection...");
+                Socket socket = serverSocket.accept();
+                System.out.println("Received connection from " + socket.getInetAddress().toString());
 
-            RPCServer.getInstance().createRPCSession(socket.getInputStream(), socket.getOutputStream());
-        } catch (IOException e) {
+                RPCServer.RPCSession session = RPCServer.getInstance()
+                    .createRPCSession(socket.getInputStream(), socket.getOutputStream());
+                try
+                {
+                    session.join();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
+        catch (IOException e)
+        {
             e.printStackTrace();
         }
     }
@@ -91,12 +105,12 @@ public class RemoteSwerve
         taskMgr = TrcTaskMgr.getInstance();
     }
 
-    public SwerveStatus getStatus(double x, double y, double turn, double gyroAngle, double lfSpeed, double rfSpeed,
-        double lrSpeed, double rrSpeed)
+    public SwerveStatus getStatus(double x, double y, double turn, double lfSpeed, double rfSpeed, double lrSpeed,
+        double rrSpeed)
     {
         taskMgr.executeTaskType(TrcTaskMgr.TaskType.PRECONTINUOUS_TASK, TrcRobot.RunMode.TELEOP_MODE);
 
-        driveBase.holonomicDrive(x, y, turn, gyroAngle);
+        driveBase.holonomicDrive(x, y, turn, gyro.getZHeading().value);
 
         SwerveStatus status = new SwerveStatus();
         status.lfPower = (float) lfModule.getPower();
@@ -112,11 +126,11 @@ public class RemoteSwerve
         if (lastTime != null)
         {
             double[] robotVelocity = model
-                .getRobotVelocity(status.lfAngle, status.rfAngle, status.lrAngle, status.rrAngle, lfSpeed, rfSpeed, lrSpeed,
-                    rrSpeed);
+                .getRobotVelocity(status.lfAngle, status.rfAngle, status.lrAngle, status.rrAngle, lfSpeed, rfSpeed,
+                    lrSpeed, rrSpeed);
 
             double deltaTime = TrcUtil.getCurrentTime() - lastTime;
-            double gyroRadians = Math.toRadians(gyroAngle);
+            double gyroRadians = Math.toRadians(gyro.getZHeading().value);
             yPos += (robotVelocity[1] * Math.cos(gyroRadians) + robotVelocity[0] * Math.sin(gyroRadians)) * deltaTime;
             xPos += (-robotVelocity[1] * Math.sin(gyroRadians) + robotVelocity[0] * Math.cos(gyroRadians)) * deltaTime;
             heading += Math.toDegrees(robotVelocity[2]) * deltaTime;
