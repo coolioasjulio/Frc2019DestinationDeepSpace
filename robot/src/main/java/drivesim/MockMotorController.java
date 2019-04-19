@@ -1,81 +1,55 @@
 package drivesim;
 
 import trclib.TrcMotor;
-import trclib.TrcSensor;
-import trclib.TrcUtil;
 
 public class MockMotorController extends TrcMotor
 {
-    private final TrcSensor.SensorData<Double> position;
-    private volatile double power;
-    private Thread monitorThread;
-    private double speed;
+    private double position = 0;
+    private double velocity = 0;
+    private double power;
 
     /**
+     * Constructor: Create an instance of the object.
      *
-     * @param topSpeed Top speed, in degrees per second
+     * @param instanceName specifies the instance name.
      */
-    public MockMotorController(final double topSpeed)
+    public MockMotorController(String instanceName)
     {
-        super("MockMotorController");
-
-        position = new TrcSensor.SensorData<>(TrcUtil.getCurrentTime(),0.0);
-
-        monitorThread = new Thread(() -> {
-            while(!Thread.interrupted())
-            {
-                synchronized (position)
-                {
-                    double currTime = TrcUtil.getCurrentTime();
-                    double positionTime = position.timestamp;
-                    if(currTime == positionTime) continue;
-                    speed = power * topSpeed;
-                    double positionChange = speed * (currTime - positionTime);
-                    double newPosition = position.value + positionChange;
-                    position.timestamp = currTime;
-                    position.value = newPosition;
-                }
-                try
-                {
-                    Thread.sleep(50);
-                }
-                catch (InterruptedException e)
-                {
-                    break;
-                }
-            }
-        });
-        monitorThread.setDaemon(true);
-        monitorThread.start();
+        super(instanceName);
     }
 
-    public void close()
+    public void setPosition(double position)
     {
-        monitorThread.interrupt();
+        this.position = position;
+    }
+
+    public void setVelocity(double velocity)
+    {
+        this.velocity = velocity;
+    }
+
+    @Override
+    public double getVelocity()
+    {
+        return velocity;
+    }
+
+    @Override
+    public double getMotorPosition()
+    {
+        return position;
+    }
+
+    @Override
+    public void setMotorPower(double power)
+    {
+        this.power = power;
     }
 
     @Override
     public boolean getInverted()
     {
         return false;
-    }
-
-    @Override
-    public double getMotorPosition()
-    {
-        return getPosition();
-    }
-
-    @Override
-    public void setMotorPower(double power)
-    {
-        set(power);
-    }
-
-    @Override
-    public double getPosition()
-    {
-        return position.value;
     }
 
     @Override
@@ -99,17 +73,7 @@ public class MockMotorController extends TrcMotor
     @Override
     public void resetPosition(boolean hardware)
     {
-        synchronized (position)
-        {
-            position.timestamp = TrcUtil.getCurrentTime();
-            position.value = 0.0;
-        }
-    }
 
-    @Override
-    public void set(double power)
-    {
-        this.power = power;
     }
 
     @Override
