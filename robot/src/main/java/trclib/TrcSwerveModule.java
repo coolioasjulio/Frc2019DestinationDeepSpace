@@ -185,11 +185,11 @@ public class TrcSwerveModule implements TrcMotorController
             optimizedWheelDir = -1.0;
         }
 
-        if (!TrcUtil.inRange(newAngle, 0.0, 360.0))
-        {
-            optimizedWheelDir = 1.0;
-            newAngle = angle;
-        }
+//        if (!TrcUtil.inRange(newAngle, 0.0, 360.0))
+//        {
+//            optimizedWheelDir = 1.0;
+//            newAngle = angle;
+//        }
 
         steerMotor.setTarget(newAngle, hold);
         prevSteerAngle = newAngle;

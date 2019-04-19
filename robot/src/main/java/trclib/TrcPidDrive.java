@@ -727,6 +727,10 @@ public class TrcPidDrive
             }
         }
         // If we come here, we are not on target yet, keep driving.
+        else if (xPidCtrl != null)
+        {
+            driveBase.holonomicDrive(xPower, yPower, turnPower, false, 0.0);
+        }
         else if (turnOnly)
         {
             switch (turnMode)
@@ -738,30 +742,26 @@ public class TrcPidDrive
                 case PIVOT_FORWARD:
                 case CURVE:
                     if (turnPower < 0.0)
-                    {
+                {
                         driveBase.tankDrive(0.0, -turnPower);
                     }
                     else
-                    {
+                {
                         driveBase.tankDrive(turnPower, 0.0);
                     }
                     break;
 
                 case PIVOT_BACKWARD:
                     if (turnPower < 0.0)
-                    {
+                {
                         driveBase.tankDrive(turnPower, 0.0);
                     }
                     else
-                    {
+                {
                         driveBase.tankDrive(0.0, -turnPower);
                     }
                     break;
             }
-        }
-        else if (xPidCtrl != null)
-        {
-            driveBase.holonomicDrive(xPower, yPower, turnPower, false, 0.0);
         }
         else if (turnMode == TurnMode.IN_PLACE)
         {

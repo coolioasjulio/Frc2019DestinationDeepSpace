@@ -228,15 +228,24 @@ public class TrcHolonomicPurePursuitController
 
         double posPower = positionController.getOutput();
         double turnPower = headingController.getOutput();
-        double velPower = headingController.getOutput();
+        double velPower = velocityController.getOutput();
 
         double r = posPower + velPower;
-        double theta = Math.toRadians(point.heading);
+        double theta = Math.toDegrees(Math.atan2(point.x - robotX, point.y - robotY));
+
+        double velocity = TrcUtil.magnitude(driveBase.getXVelocity(), driveBase.getYVelocity());
+
+        System.out.printf(
+            "Robot: (%.2f,%.2f), RobotVel: %.2f, Target: (%.2f,%.2f), TargetVel: %.2f, pathIndex=%d, r,theta=(%.2f,%.1f)\n",
+            robotX, robotY, velocity, point.x, point.y, point.velocity, pathIndex, r, theta);
 
         // If we have timed out or finished, stop the operation.
         if (TrcUtil.getCurrentTime() >= timedOutTime || (pathIndex == path.length - 1 && dist <= tolerance))
         {
-            onFinishedEvent.set(true);
+            if (onFinishedEvent != null)
+            {
+                onFinishedEvent.set(true);
+            }
             stop();
         }
         else
@@ -269,6 +278,11 @@ public class TrcHolonomicPurePursuitController
 
     private TrcMotionProfilePoint getFollowingPoint(double robotX, double robotY)
     {
+        if (pathIndex == path.length - 1)
+        {
+            return path[pathIndex];
+        }
+
         Double prevDist = null;
         if (pathIndex > 0)
         {
