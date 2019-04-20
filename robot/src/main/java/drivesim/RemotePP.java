@@ -67,8 +67,8 @@ public class RemotePP
 
         warpSpace = new TrcWarpSpace("warp", 0.0, 360.0);
 
-        purePursuit = new TrcHolonomicPurePursuitController("PurePursuit", driveBase, 0.5, 0.1,
-            new TrcPidController.PidCoefficients(0.1), new TrcPidController.PidCoefficients(0.004, 0.0, 0.0004),
+        purePursuit = new TrcHolonomicPurePursuitController("PurePursuit", driveBase, 1.0, 0.1,
+            new TrcPidController.PidCoefficients(0.2), new TrcPidController.PidCoefficients(0.004, 0.0, 0.0004),
             new TrcPidController.PidCoefficients(0.0, 0.0, 0.0, 1.0 / topSpeed));
 
         taskMgr = TrcTaskMgr.getInstance();
@@ -76,8 +76,15 @@ public class RemotePP
 
     public void drive()
     {
-        Arrays.stream(PATH).forEach(point -> point.heading = Math.toDegrees(point.heading));
-        purePursuit.start(PATH);
+//        Arrays.stream(PATH).forEach(point -> point.heading = Math.toDegrees(point.heading));
+//        purePursuit.start(PATH);
+        purePursuit.start(new TrcMotionProfilePoint[]{
+            new TrcMotionProfilePoint(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            new TrcMotionProfilePoint(0.1, 0.0, 1.0, 0.0, 2.5, 0.0, 0.0, 0.0),
+            new TrcMotionProfilePoint(0.1, 0.0, 4, 0.0, 4, 0.0, 0.0, 0.0),
+            new TrcMotionProfilePoint(0.1, 3, 4, 0.0, 1.5, 0.0, 0.0, 0.0),
+            new TrcMotionProfilePoint(0.1, 4, 4, 0.0, 0.0, 0.0, 0.0, 0.0),
+        });
     }
 
     public SwerveStatus getStatus(double x, double y, double heading)

@@ -22,6 +22,9 @@
 
 package trclib;
 
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealVector;
+
 public class TrcHolonomicPurePursuitController
 {
     private final String instanceName;
@@ -31,7 +34,7 @@ public class TrcHolonomicPurePursuitController
     private volatile double tolerance; // Volatile so it can be changed at runtime
     private volatile double followingDistance; // Volatile so it can be changed at runtime
     private TrcMotionProfilePoint[] path;
-    private int pathIndex = 0;
+    private int pathIndex = 1;
     private double positionInput;
     private TrcEvent onFinishedEvent;
     private double timedOutTime;
@@ -170,7 +173,7 @@ public class TrcHolonomicPurePursuitController
 
         this.path = path;
         timedOutTime = timeout == 0.0 ? Double.POSITIVE_INFINITY : TrcUtil.getCurrentTime() + timeout;
-        pathIndex = 0;
+        pathIndex = 1;
         positionInput = 0;
 
         positionController.reset();
@@ -276,6 +279,43 @@ public class TrcHolonomicPurePursuitController
         return (1.0 - weight) * start + weight * end;
     }
 
+    private TrcMotionProfilePoint interpolatePoints(TrcMotionProfilePoint prev, TrcMotionProfilePoint point,
+        double robotX, double robotY)
+    {
+        // Find intersection of path segment with circle with radius followingDistance and center at robot
+        RealVector start = new ArrayRealVector(new double[] { prev.x, prev.y });
+        RealVector end = new ArrayRealVector(new double[] { point.x, point.y });
+        RealVector robot = new ArrayRealVector(new double[] { robotX, robotY });
+
+        RealVector startToEnd = end.subtract(start);
+        RealVector robotToStart = start.subtract(robot);
+        // Solve quadratic formula
+        double a = startToEnd.dotProduct(startToEnd);
+        double b = 2 * robotToStart.dotProduct(startToEnd);
+        double c = robotToStart.dotProduct(robotToStart) - followingDistance * followingDistance;
+
+        double discriminant = b * b - 4 * a * c;
+        if (discriminant < 0)
+        {
+            // No valid intersection.
+            return null;
+        }
+        else
+        {
+            // line is a parametric equation, where t=0 is start, t=1 is end.
+            discriminant = Math.sqrt(discriminant);
+            double t1 = (-b - discriminant) / (2 * a);
+            double t2 = (-b + discriminant) / (2 * a);
+            double t = Math.max(t1, t2); // We want the furthest intersection
+            // If the intersection is not on the line segment, it's invalid.
+            if (!TrcUtil.inRange(t, 0.0, 1.0))
+            {
+                return null;
+            }
+            return interpolate(prev, point, t);
+        }
+    }
+
     private TrcMotionProfilePoint getFollowingPoint(double robotX, double robotY)
     {
         if (pathIndex == path.length - 1)
@@ -283,27 +323,15 @@ public class TrcHolonomicPurePursuitController
             return path[pathIndex];
         }
 
-        Double prevDist = null;
-        if (pathIndex > 0)
+        for (int i = Math.max(pathIndex, 1); i < path.length; i++)
         {
-            TrcMotionProfilePoint point = path[pathIndex - 1];
-            prevDist = TrcUtil.magnitude(robotX - point.x, robotY - point.y);
-        }
-
-        for (int i = pathIndex; i < path.length; i++)
-        {
-            TrcMotionProfilePoint point = path[i];
-            double dist = TrcUtil.magnitude(robotX - point.x, robotY - point.y);
-            if (prevDist != null && dist >= followingDistance && prevDist <= followingDistance)
+            // If there is a valid intersection, return it.
+            TrcMotionProfilePoint interpolated = interpolatePoints(path[i - 1], path[i], robotX, robotY);
+            if (interpolated != null)
             {
                 pathIndex = i;
-                if (prevDist == dist)
-                {
-                    return point;
-                }
-                return interpolate(path[i - 1], point, TrcUtil.scaleRange(followingDistance, prevDist, dist, 0.0, 1.0));
+                return interpolated;
             }
-            prevDist = dist;
         }
 
         // There are no points where the distance to any point is followingDistance.
