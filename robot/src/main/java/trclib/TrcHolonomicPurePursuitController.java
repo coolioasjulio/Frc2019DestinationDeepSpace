@@ -33,7 +33,7 @@ public class TrcHolonomicPurePursuitController
     private final TrcPidController positionController, headingController, velocityController;
     private volatile double tolerance; // Volatile so it can be changed at runtime
     private volatile double followingDistance; // Volatile so it can be changed at runtime
-    private TrcMotionProfilePoint[] path;
+    private TrcPath path;
     private int pathIndex = 1;
     private double positionInput;
     private TrcEvent onFinishedEvent;
@@ -143,7 +143,7 @@ public class TrcHolonomicPurePursuitController
      *
      * @param path The path to follow. Must start at (0,0). Velocity is per second.
      */
-    public synchronized void start(TrcMotionProfilePoint[] path)
+    public synchronized void start(TrcPath path)
     {
         start(path, null, 0.0);
     }
@@ -156,9 +156,9 @@ public class TrcHolonomicPurePursuitController
      * @param onFinishedEvent When finished, signal this event.
      * @param timeout         Number of seconds after which to cancel this operation. 0.0 for no timeout.
      */
-    public synchronized void start(TrcMotionProfilePoint[] path, TrcEvent onFinishedEvent, double timeout)
+    public synchronized void start(TrcPath path, TrcEvent onFinishedEvent, double timeout)
     {
-        if (path == null || path.length == 0)
+        if (path == null || path.getSize() == 0)
         {
             throw new IllegalArgumentException("Path cannot be null or empty!");
         }
@@ -223,7 +223,7 @@ public class TrcHolonomicPurePursuitController
     {
         double robotX = driveBase.getXPosition();
         double robotY = driveBase.getYPosition();
-        TrcMotionProfilePoint point = getFollowingPoint(robotX, robotY);
+        TrcWaypoint point = getFollowingPoint(robotX, robotY);
 
         double dist = TrcUtil.magnitude(robotX - point.x, robotY - point.y);
         positionInput = -dist; // Make this negative so the control effort is positive.
@@ -243,7 +243,7 @@ public class TrcHolonomicPurePursuitController
             robotX, robotY, velocity, point.x, point.y, point.velocity, pathIndex, r, theta);
 
         // If we have timed out or finished, stop the operation.
-        if (TrcUtil.getCurrentTime() >= timedOutTime || (pathIndex == path.length - 1 && dist <= tolerance))
+        if (TrcUtil.getCurrentTime() >= timedOutTime || (pathIndex == path.getSize() - 1 && dist <= tolerance))
         {
             if (onFinishedEvent != null)
             {
@@ -257,7 +257,7 @@ public class TrcHolonomicPurePursuitController
         }
     }
 
-    private TrcMotionProfilePoint interpolate(TrcMotionProfilePoint point1, TrcMotionProfilePoint point2, double weight)
+    private TrcWaypoint interpolate(TrcWaypoint point1, TrcWaypoint point2, double weight)
     {
         double timestep = interpolate(point1.timeStep, point2.timeStep, weight);
         double x = interpolate(point1.x, point2.x, weight);
@@ -267,7 +267,7 @@ public class TrcHolonomicPurePursuitController
         double acceleration = interpolate(point1.acceleration, point2.acceleration, weight);
         double jerk = interpolate(point1.jerk, point2.jerk, weight);
         double heading = interpolate(point1.heading, point2.heading, weight);
-        return new TrcMotionProfilePoint(timestep, x, y, position, velocity, acceleration, jerk, heading);
+        return new TrcWaypoint(timestep, x, y, position, velocity, acceleration, jerk, heading);
     }
 
     private double interpolate(double start, double end, double weight)
@@ -279,8 +279,7 @@ public class TrcHolonomicPurePursuitController
         return (1.0 - weight) * start + weight * end;
     }
 
-    private TrcMotionProfilePoint interpolatePoints(TrcMotionProfilePoint prev, TrcMotionProfilePoint point,
-        double robotX, double robotY)
+    private TrcWaypoint interpolatePoints(TrcWaypoint prev, TrcWaypoint point, double robotX, double robotY)
     {
         // Find intersection of path segment with circle with radius followingDistance and center at robot
         RealVector start = new ArrayRealVector(new double[] { prev.x, prev.y });
@@ -316,17 +315,17 @@ public class TrcHolonomicPurePursuitController
         }
     }
 
-    private TrcMotionProfilePoint getFollowingPoint(double robotX, double robotY)
+    private TrcWaypoint getFollowingPoint(double robotX, double robotY)
     {
-        if (pathIndex == path.length - 1)
+        if (pathIndex == path.getSize() - 1)
         {
-            return path[pathIndex];
+            return path.getWaypoint(pathIndex);
         }
 
-        for (int i = Math.max(pathIndex, 1); i < path.length; i++)
+        for (int i = Math.max(pathIndex, 1); i < path.getSize(); i++)
         {
             // If there is a valid intersection, return it.
-            TrcMotionProfilePoint interpolated = interpolatePoints(path[i - 1], path[i], robotX, robotY);
+            TrcWaypoint interpolated = interpolatePoints(path.getWaypoint(i - 1), path.getWaypoint(i), robotX, robotY);
             if (interpolated != null)
             {
                 pathIndex = i;
@@ -336,10 +335,10 @@ public class TrcHolonomicPurePursuitController
 
         // There are no points where the distance to any point is followingDistance.
         // Choose the one closest to followingDistance.
-        TrcMotionProfilePoint closestPoint = path[pathIndex];
-        for (int i = pathIndex; i < path.length; i++)
+        TrcWaypoint closestPoint = path.getWaypoint(pathIndex);
+        for (int i = pathIndex; i < path.getSize(); i++)
         {
-            TrcMotionProfilePoint point = path[i];
+            TrcWaypoint point = path.getWaypoint(i);
             if (Math.abs(TrcUtil.magnitude(robotX - closestPoint.x, robotY - closestPoint.y) - followingDistance)
                 >= Math.abs(TrcUtil.magnitude(robotX - point.x, robotY - point.y) - followingDistance))
             {
