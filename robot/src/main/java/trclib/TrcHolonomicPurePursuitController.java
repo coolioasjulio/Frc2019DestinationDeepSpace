@@ -27,6 +27,23 @@ import org.apache.commons.math3.linear.RealVector;
 
 public class TrcHolonomicPurePursuitController
 {
+    public enum InterpolationType
+    {
+        LINEAR(1), QUADRATIC(2), CUBIC(3), QUARTIC(4), QUADRATIC_INV(2), CUBIC_INV(3), QUARTIC_INV(4);
+
+        private int power;
+
+        InterpolationType(int power)
+        {
+            this.power = power;
+        }
+
+        public int getPower()
+        {
+            return power;
+        }
+    }
+
     private final String instanceName;
     private final TrcDriveBase driveBase;
     private final TrcTaskMgr.TaskObject driveTaskObj;
@@ -38,6 +55,7 @@ public class TrcHolonomicPurePursuitController
     private double positionInput;
     private TrcEvent onFinishedEvent;
     private double timedOutTime;
+    private InterpolationType interpolationType = InterpolationType.LINEAR;
 
     public TrcHolonomicPurePursuitController(String instanceName, TrcDriveBase driveBase, double followingDistance,
         double tolerance, TrcPidController.PidCoefficients pidCoefficients,
@@ -68,6 +86,16 @@ public class TrcHolonomicPurePursuitController
         velocityController.setAbsoluteSetPoint(true);
 
         this.driveTaskObj = TrcTaskMgr.getInstance().createTask(instanceName + ".driveTask", this::driveTask);
+    }
+
+    /**
+     * Configure the method of interpolating between waypoints. Methods ending with INV will favor the ending point.
+     *
+     * @param interpolationType The type of interpolation to use.
+     */
+    public void setInterpolationType(InterpolationType interpolationType)
+    {
+        this.interpolationType = interpolationType == null ? InterpolationType.LINEAR : interpolationType;
     }
 
     /**
@@ -275,6 +303,24 @@ public class TrcHolonomicPurePursuitController
         if (!TrcUtil.inRange(weight, 0.0, 1.0))
         {
             throw new IllegalArgumentException("Weight must be in range [0,1]!");
+        }
+        switch (interpolationType)
+        {
+            case LINEAR:
+            case QUADRATIC:
+            case CUBIC:
+            case QUARTIC:
+                weight = Math.pow(weight, interpolationType.getPower());
+                break;
+
+            case QUADRATIC_INV:
+            case QUARTIC_INV:
+                weight = 1.0 - Math.pow(weight - 1, interpolationType.getPower());
+                break;
+
+            case CUBIC_INV:
+                weight = 1.0 + Math.pow(weight - 1, interpolationType.getPower());
+                break;
         }
         return (1.0 - weight) * start + weight * end;
     }
