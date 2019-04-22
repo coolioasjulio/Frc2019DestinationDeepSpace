@@ -22,8 +22,7 @@ public class RemotePP
     private final TrcSwerveModule rrModule;
     private final MockSwerveDriveBase driveBase;
     private final TrcTaskMgr taskMgr;
-    private volatile double x, y, heading;
-    private volatile Double lastTime;
+    private volatile double heading;
     private TrcWarpSpace warpSpace;
     private TrcHolonomicPurePursuitController purePursuit;
 
@@ -79,26 +78,16 @@ public class RemotePP
     {
         // TrcPath path = new TrcPath(false, PATH);
         // purePursuit.start(path.toDegrees());
-        purePursuit.start(new TrcPath(true, new TrcWaypoint(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            new TrcWaypoint(0.1, 0.0, 1.0, 0.0, 2.5, 0.0, 0.0, 0.0),
-            new TrcWaypoint(0.1, 0.0, 4, 0.0, 4, 0.0, 0.0, 0.0), new TrcWaypoint(0.1, 3, 4, 0.0, 1.5, 0.0, 0.0, 0.0),
+        purePursuit.start(new TrcPath(true,
+            new TrcWaypoint(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            new TrcWaypoint(0.1, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0),
+            new TrcWaypoint(0.1, 0.0, 4, 0.0, 2.5, 0.0, 0.0, 0.0),
+            new TrcWaypoint(0.1, 3, 4, 0.0, 1.5, 0.0, 0.0, 0.0),
             new TrcWaypoint(0.1, 4, 4, 0.0, 0.0, 0.0, 0.0, 0.0)));
     }
 
-    public SwerveStatus getStatus(double x, double y, double heading)
+    public SwerveStatus getStatus(double x, double y, double heading, double xVel, double yVel)
     {
-        double xVel = 0;
-        double yVel = 0;
-        double currTime = TrcUtil.getCurrentTime();
-        if (lastTime != null)
-        {
-            xVel = (x - this.x) / (currTime - lastTime);
-            yVel = (y - this.y) / (currTime - lastTime);
-        }
-        lastTime = currTime;
-        this.x = x;
-        this.y = y;
-
         this.heading = warpSpace.getOptimizedTarget(heading, this.heading);
         driveBase.setState(x, y, heading, xVel, yVel);
 
