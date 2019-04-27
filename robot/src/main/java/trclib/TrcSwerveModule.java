@@ -187,7 +187,14 @@ public class TrcSwerveModule implements TrcMotorController
             optimizedWheelDir = -1.0;
         }
 
-        steerMotor.setTarget(newAngle, hold);
+        if (steerMotor != null)
+        {
+            steerMotor.setTarget(newAngle, hold);
+        }
+        else if (steerServo != null)
+        {
+            steerServo.setPosition(newAngle);
+        }
         prevSteerAngle = newAngle;
 
         if (debugEnabled)
@@ -230,7 +237,7 @@ public class TrcSwerveModule implements TrcMotorController
     public double getSteerAngle()
     {
         final String funcName = "getSteerAngle";
-        double angle = steerMotor.getPosition();
+        double angle = steerMotor != null ? steerMotor.getPosition() : steerServo.getPosition();
 
         if (debugEnabled)
         {
