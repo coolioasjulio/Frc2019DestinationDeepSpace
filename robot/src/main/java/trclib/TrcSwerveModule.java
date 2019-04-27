@@ -193,7 +193,14 @@ public class TrcSwerveModule implements TrcMotorController
         }
         else if (steerServo != null)
         {
-            steerServo.setPosition(newAngle);
+            if (steerServo.getServoType() == TrcEnhancedServo.ServoType.UNBOUNDED)
+            {
+                steerServo.setPosition(newAngle / 360.0);
+            }
+            else if (steerServo.getServoType() == TrcEnhancedServo.ServoType.BOUNDED)
+            {
+                steerServo.setPosition(TrcUtil.modulo(newAngle, 360.0) / 360.0);
+            }
         }
         prevSteerAngle = newAngle;
 

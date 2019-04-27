@@ -22,6 +22,7 @@
 
 package frclib;
 
+import com.revrobotics.CANEncoder;
 import com.revrobotics.CANPIDController;
 import com.revrobotics.ControlType;
 import trclib.TrcPidController;
@@ -31,15 +32,19 @@ public class FrcSparkSmartMotionServo extends TrcServo
 {
     private FrcCANSparkMax spark;
     private CANPIDController pidController;
+    private CANEncoder encoder;
 
     public FrcSparkSmartMotionServo(String instanceName, FrcCANSparkMax spark,
-        TrcPidController.PidCoefficients pidCoefficients, double tolerance, double maxVelocity,
+        TrcPidController.PidCoefficients pidCoefficients, double degreesPerTick, double tolerance, double maxVelocity,
         double maxAcceleration)
     {
         super(instanceName);
 
         this.spark = spark;
         this.pidController = spark.motor.getPIDController();
+        encoder = spark.motor.getEncoder();
+        encoder.setPositionConversionFactor(degreesPerTick);
+        encoder.setVelocityConversionFactor(degreesPerTick * 60.0); // ticks/min -> degrees/sec
 
         pidController.setSmartMotionAccelStrategy(CANPIDController.AccelStrategy.kTrapezoidal, 0);
         pidController.setSmartMotionMinOutputVelocity(0.0, 0);
@@ -49,11 +54,22 @@ public class FrcSparkSmartMotionServo extends TrcServo
         setTolerance(tolerance);
     }
 
+    /**
+     * Set the tolerance for this servo.
+     *
+     * @param tolerance In degrees.
+     */
     public void setTolerance(double tolerance)
     {
         pidController.setSmartMotionAllowedClosedLoopError(tolerance, 0);
     }
 
+    /**
+     * Set the smart motion constraints of this servo.
+     *
+     * @param maxVelocity In degrees per second.
+     * @param maxAcceleration In degrees per second per second.
+     */
     public void setMotionConstraints(double maxVelocity, double maxAcceleration)
     {
         pidController.setSmartMotionMaxAccel(maxAcceleration, 0);
@@ -86,14 +102,16 @@ public class FrcSparkSmartMotionServo extends TrcServo
     }
 
     @Override
-    public void setPosition(double position)
+    public void setPosition(double angle)
     {
-        pidController.setReference(position, ControlType.kSmartMotion);
+        // angle is in source range [0,1], so we need to expand it to source range [0,360]
+        // This does not mean that 0<=angle<=1, since this is an unbounded servo
+        pidController.setReference(angle * 360.0, ControlType.kSmartMotion);
     }
 
     @Override
     public double getPosition()
     {
-        return spark.getPosition();
+        return encoder.getPosition();
     }
 }

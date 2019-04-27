@@ -36,6 +36,22 @@ import trclib.TrcTaskMgr.TaskType;
  */
 public class TrcEnhancedServo
 {
+    public enum ServoType
+    {
+        /**
+         * Can set position within a fixed physical range.
+         */
+        BOUNDED,
+        /**
+         * Can set position within an unlimited physical range. Can rotate indefinitely.
+         */
+        UNBOUNDED,
+        /**
+         * Can rotate indefinitely, but cannot set position. Can only specify direction and speed.
+         */
+        CONTINUOUS
+    }
+
     private static final String moduleName = "TrcEnhancedServo";
     private static final boolean debugEnabled = false;
     private static final boolean tracingEnabled = false;
@@ -49,7 +65,7 @@ public class TrcEnhancedServo
     private static final double SERVO_CONTINUOUS_REV_MAX = 0.0;
 
     private final String instanceName;
-    private final boolean continuousServo;
+    private final ServoType servoType;
     private final TrcServo servo1;
     private final TrcServo servo2;
     private final TrcDigitalInput lowerLimitSwitch;
@@ -75,14 +91,14 @@ public class TrcEnhancedServo
      * This method is called by different constructors to do common initialization.
      *
      * @param instanceName specifies the instance name.
-     * @param continuousServo specifies true if servos are continuous servo.
+     * @param servoType specifies the type of servo.
      * @param servo1 specifies the first physical servo object.
      * @param servo2 specifies the second physical servo object.
      * @param lowerLimitSwitch specifies the lower limit switch object.
      * @param upperLimitSwitch specifies the high limit switch object.
      */
     public TrcEnhancedServo(
-        String instanceName, boolean continuousServo, TrcServo servo1, TrcServo servo2,
+        String instanceName, ServoType servoType, TrcServo servo1, TrcServo servo2,
         TrcDigitalInput lowerLimitSwitch, TrcDigitalInput upperLimitSwitch)
     {
         if (debugEnabled)
@@ -93,7 +109,7 @@ public class TrcEnhancedServo
         }
 
         this.instanceName = instanceName;
-        this.continuousServo = continuousServo;
+        this.servoType = servoType;
         this.servo1 = servo1;
         this.servo2 = servo2;
         this.lowerLimitSwitch = lowerLimitSwitch;
@@ -109,16 +125,16 @@ public class TrcEnhancedServo
      * This method is called by different constructors to do common initialization.
      *
      * @param instanceName specifies the instance name.
-     * @param continuousServo specifies true if servos are continuous servo.
+     * @param servoType specifies the type of servo.
      * @param servo specifies the physical servo object.
      * @param lowerLimitSwitch specifies the lower limit switch object.
      * @param upperLimitSwitch specifies the high limit switch object.
      */
     public TrcEnhancedServo(
-        String instanceName, boolean continuousServo, TrcServo servo,
+        String instanceName, ServoType servoType, TrcServo servo,
         TrcDigitalInput lowerLimitSwitch, TrcDigitalInput upperLimitSwitch)
     {
-        this(instanceName, continuousServo, servo, null, lowerLimitSwitch, upperLimitSwitch);
+        this(instanceName, servoType, servo, null, lowerLimitSwitch, upperLimitSwitch);
     }   //TrcEnhancedServo
 
     /**
@@ -126,14 +142,14 @@ public class TrcEnhancedServo
      * This method is called by different constructors to do common initialization.
      *
      * @param instanceName specifies the instance name.
-     * @param continuousServo specifies true if servos are continuous servo.
+     * @param servoType specifies the type of servo.
      * @param servo specifies the physical servo object.
      * @param lowerLimitSwitch specifies the lower limit switch object.
      */
     public TrcEnhancedServo(
-        String instanceName, boolean continuousServo, TrcServo servo, TrcDigitalInput lowerLimitSwitch)
+        String instanceName, ServoType servoType, TrcServo servo, TrcDigitalInput lowerLimitSwitch)
     {
-        this(instanceName, continuousServo, servo, null, lowerLimitSwitch, null);
+        this(instanceName, servoType, servo, null, lowerLimitSwitch, null);
     }   //TrcEnhancedServo
 
     /**
@@ -150,7 +166,7 @@ public class TrcEnhancedServo
         String instanceName, TrcServo servo1, TrcServo servo2,
         TrcDigitalInput lowerLimitSwitch, TrcDigitalInput upperLimitSwitch)
     {
-        this(instanceName, false, servo1, servo2, lowerLimitSwitch, upperLimitSwitch);
+        this(instanceName, ServoType.BOUNDED, servo1, servo2, lowerLimitSwitch, upperLimitSwitch);
     }   //TrcEnhancedServo
 
     /**
@@ -165,7 +181,7 @@ public class TrcEnhancedServo
     public TrcEnhancedServo(
         String instanceName, TrcServo servo1, TrcServo servo2, TrcDigitalInput lowerLimitSwitch)
     {
-        this(instanceName, false, servo1, servo2, lowerLimitSwitch, null);
+        this(instanceName, ServoType.BOUNDED, servo1, servo2, lowerLimitSwitch, null);
     }   //TrcEnhancedServo
 
     /**
@@ -179,7 +195,7 @@ public class TrcEnhancedServo
     public TrcEnhancedServo(
         String instanceName, TrcServo servo1, TrcServo servo2)
     {
-        this(instanceName, false, servo1, servo2, null, null);
+        this(instanceName, ServoType.BOUNDED, servo1, servo2, null, null);
     }   //TrcEnhancedServo
 
     /**
@@ -194,7 +210,7 @@ public class TrcEnhancedServo
     public TrcEnhancedServo(
         String instanceName, TrcServo servo, TrcDigitalInput lowerLimitSwitch, TrcDigitalInput upperLimitSwitch)
     {
-        this(instanceName, false, servo, null, lowerLimitSwitch, upperLimitSwitch);
+        this(instanceName, ServoType.BOUNDED, servo, null, lowerLimitSwitch, upperLimitSwitch);
     }   //TrcEnhancedServo
 
     /**
@@ -208,8 +224,21 @@ public class TrcEnhancedServo
     public TrcEnhancedServo(
         String instanceName, TrcServo servo, TrcDigitalInput lowerLimitSwitch)
     {
-        this(instanceName, false, servo, null, lowerLimitSwitch, null);
+        this(instanceName, ServoType.BOUNDED, servo, null, lowerLimitSwitch, null);
     }   //TrcEnhancedServo
+
+    /**
+     * Constructor: Creates an instance of the object.
+     * This method is called by different constructors to do common initialization.
+     *
+     * @param instanceName specifies the instance name.
+     * @param servo specifies the physical servo object.
+     * @param servoType specifies the type of servo.
+     */
+    public TrcEnhancedServo(String instanceName, TrcServo servo, ServoType servoType)
+    {
+        this(instanceName, servoType, servo, null, null, null);
+    }
 
     /**
      * Constructor: Creates an instance of the object.
@@ -220,7 +249,7 @@ public class TrcEnhancedServo
      */
     public TrcEnhancedServo(String instanceName, TrcServo servo)
     {
-        this(instanceName, false, servo, null, null, null);
+        this(instanceName, ServoType.BOUNDED, servo, null, null, null);
     }   //TrcEnhancedServo
 
     /**
@@ -232,6 +261,11 @@ public class TrcEnhancedServo
     {
         return instanceName;
     }   //toString
+
+    public ServoType getServoType()
+    {
+        return servoType;
+    }
 
     /**
      * This method enables/disables the enhanced servo task for performing step rate speed control or zero
@@ -301,7 +335,7 @@ public class TrcEnhancedServo
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API, "stepRate=%f", stepRate);
         }
 
-        if (!continuousServo && lowerLimitSwitch != null & upperLimitSwitch != null)
+        if (servoType != ServoType.CONTINUOUS && lowerLimitSwitch != null & upperLimitSwitch != null)
         {
             this.physicalRangeMax = physicalRangeMax;
             servo1.setPhysicalRange(physicalRangeMin, physicalRangeMax);
@@ -335,7 +369,7 @@ public class TrcEnhancedServo
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
-        if (continuousServo)
+        if (servoType == ServoType.CONTINUOUS)
         {
             servo1.setPosition(SERVO_CONTINUOUS_STOP);
         }
@@ -382,7 +416,7 @@ public class TrcEnhancedServo
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API, "position=%f", position);
         }
 
-        if (!continuousServo)
+        if (servoType != ServoType.CONTINUOUS)
         {
             targetPosition = position;
 
@@ -419,7 +453,7 @@ public class TrcEnhancedServo
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API, "position=%f,stepRate=%f", position, stepRate);
         }
 
-        if (!continuousServo)
+        if (servoType != ServoType.CONTINUOUS)
         {
             this.targetPosition = position;
             this.currStepRate = Math.abs(stepRate);
@@ -451,7 +485,7 @@ public class TrcEnhancedServo
                                 "maxStepRate=%f,minPos=%f,maxPos=%f", maxStepRate, minPos, maxPos);
         }
 
-        if (!continuousServo)
+        if (servoType != ServoType.CONTINUOUS)
         {
             this.maxStepRate = maxStepRate;
             this.minPos = minPos;
@@ -480,7 +514,7 @@ public class TrcEnhancedServo
         }
 
         power = TrcUtil.clipRange(power, -1.0, 1.0);
-        if (continuousServo)
+        if (servoType == ServoType.CONTINUOUS)
         {
             if (lowerLimitSwitch != null && lowerLimitSwitch.isActive() && power < 0.0 ||
                 upperLimitSwitch != null && upperLimitSwitch.isActive() && power > 0.0)
