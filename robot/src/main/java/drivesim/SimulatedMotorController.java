@@ -49,6 +49,12 @@ public class SimulatedMotorController extends TrcMotor
         monitorThread.start();
     }
 
+    @Override
+    public double getVelocity()
+    {
+        return speed;
+    }
+
     public void close()
     {
         monitorThread.interrupt();
