@@ -1,6 +1,5 @@
 package drivesim;
 
-import com.coolioasjulio.rpc.server.RPCServer;
 import trclib.TrcDigitalInput;
 import trclib.TrcGyro;
 import trclib.TrcPidActuator;
@@ -9,7 +8,8 @@ import trclib.TrcRobot;
 import trclib.TrcSwerveDriveBase;
 import trclib.TrcSwerveModule;
 import trclib.TrcTaskMgr;
-import trclib.TrcUtil;
+
+import java.util.Arrays;
 
 public class RemoteSwerve
 {
@@ -58,6 +58,8 @@ public class RemoteSwerve
         rfModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), rfActuator);
         lrModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), lrActuator);
         rrModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), rrActuator);
+        Arrays.stream(new TrcSwerveModule[] { lfModule, rfModule, lrModule, rrModule })
+            .forEach(e -> e.setSteeringLimits(-170, 170));
 
         driveBase = new TrcSwerveDriveBase(lfModule, lrModule, rfModule, rrModule, gyro, width, length);
 
