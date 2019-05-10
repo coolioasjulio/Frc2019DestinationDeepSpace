@@ -38,18 +38,16 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
     /**
      * Constructor: Create an instance of the 4-wheel swerve drive base.
      *
-     * @param leftFrontMotor specifies the left front motor of the drive base.
-     * @param leftRearMotor specifies the left rear motor of the drive base.
+     * @param leftFrontMotor  specifies the left front motor of the drive base.
+     * @param leftRearMotor   specifies the left rear motor of the drive base.
      * @param rightFrontMotor specifies the right front motor of the drive base.
-     * @param rightRearMotor specifies the right rear motor of the drive base.
-     * @param gyro specifies the gyro. If none, it can be set to null.
-     * @param wheelBaseWidth specifies the width of the wheel base in inches.
+     * @param rightRearMotor  specifies the right rear motor of the drive base.
+     * @param gyro            specifies the gyro. If none, it can be set to null.
+     * @param wheelBaseWidth  specifies the width of the wheel base in inches.
      * @param wheelBaseLength specifies the length of the wheel base in inches.
      */
-    public TrcSwerveDriveBase(
-        TrcSwerveModule leftFrontMotor, TrcSwerveModule leftRearMotor,
-        TrcSwerveModule rightFrontMotor, TrcSwerveModule rightRearMotor,
-        TrcGyro gyro, double wheelBaseWidth, double wheelBaseLength)
+    public TrcSwerveDriveBase(TrcSwerveModule leftFrontMotor, TrcSwerveModule leftRearMotor,
+        TrcSwerveModule rightFrontMotor, TrcSwerveModule rightRearMotor, TrcGyro gyro, double wheelBaseWidth, double wheelBaseLength)
     {
         super(leftFrontMotor, leftRearMotor, rightFrontMotor, rightRearMotor, gyro);
 
@@ -65,20 +63,33 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
     /**
      * Constructor: Create an instance of the 4-wheel swerve drive base.
      *
-     * @param leftFrontMotor specifies the left front motor of the drive base.
-     * @param leftRearMotor specifies the left rear motor of the drive base.
+     * @param leftFrontMotor  specifies the left front motor of the drive base.
+     * @param leftRearMotor   specifies the left rear motor of the drive base.
      * @param rightFrontMotor specifies the right front motor of the drive base.
-     * @param rightRearMotor specifies the right rear motor of the drive base.
-     * @param wheelBaseWidth specifies the width of the wheel base in inches.
+     * @param rightRearMotor  specifies the right rear motor of the drive base.
+     * @param wheelBaseWidth  specifies the width of the wheel base in inches.
      * @param wheelBaseLength specifies the length of the wheel base in inches.
      */
-    public TrcSwerveDriveBase(
-        TrcSwerveModule leftFrontMotor, TrcSwerveModule leftRearMotor,
-        TrcSwerveModule rightFrontMotor, TrcSwerveModule rightRearMotor,
-        double wheelBaseWidth, double wheelBaseLength)
+    public TrcSwerveDriveBase(TrcSwerveModule leftFrontMotor, TrcSwerveModule leftRearMotor,
+        TrcSwerveModule rightFrontMotor, TrcSwerveModule rightRearMotor, double wheelBaseWidth, double wheelBaseLength)
     {
         this(leftFrontMotor, leftRearMotor, rightFrontMotor, rightRearMotor, null, wheelBaseWidth, wheelBaseLength);
     }   //TrcSwerveDriveBase
+
+    public double getWheelBaseWidth()
+    {
+        return wheelBaseWidth;
+    }
+
+    public double getWheelBaseLength()
+    {
+        return wheelBaseLength;
+    }
+
+    public double getWheelBaseDiagonal()
+    {
+        return wheelBaseDiagonal;
+    }
 
     /**
      * This method does zero calibration on the steer angle encoders.

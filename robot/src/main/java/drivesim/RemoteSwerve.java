@@ -8,8 +8,12 @@ import trclib.TrcRobot;
 import trclib.TrcSwerveDriveBase;
 import trclib.TrcSwerveModule;
 import trclib.TrcTaskMgr;
+import trclib.TrcUtil;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class RemoteSwerve
 {
@@ -20,6 +24,8 @@ public class RemoteSwerve
     private final TrcSwerveModule rrModule;
     private final TrcSwerveDriveBase driveBase;
     private final TrcTaskMgr taskMgr;
+    private Double lastTime;
+    private double x, y, heading;
 
     public RemoteSwerve(double width, double length, TrcGyro gyro)
     {
@@ -86,6 +92,40 @@ public class RemoteSwerve
         taskMgr.executeTaskType(TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK, TrcRobot.RunMode.TELEOP_MODE);
 
         return status;
+    }
+
+    public void updateOdometry(double lfSpeed, double rfSpeed, double lrSpeed, double rrSpeed)
+    {
+        double[] wheels = new double[] { lfSpeed, rfSpeed, lrSpeed, rrSpeed };
+        double[] angles = new double[] { lfModule.getSteerAngle(), rfModule.getSteerAngle(), lrModule.getSteerAngle(),
+            rrModule.getSteerAngle() };
+        List<double[]> vectors = IntStream.range(0, 4)
+            .mapToObj(
+                i -> new double[] {
+                    wheels[i] * Math.sin(Math.toRadians(angles[i])),
+                    wheels[i] * Math.cos(Math.toRadians(angles[i])) })
+            .collect(Collectors.toList());
+
+        double vx = vectors.stream().mapToDouble(e -> e[0]).average().orElse(0.0);
+        double vy = vectors.stream().mapToDouble(e -> e[1]).average().orElse(0.0);
+        double[] lf = vectors.get(0);
+        double[] rf = vectors.get(1);
+        double[] lr = vectors.get(2);
+        double[] rr = vectors.get(3);
+        double x = driveBase.getWheelBaseWidth() / driveBase.getWheelBaseDiagonal();
+        double y = driveBase.getWheelBaseLength() / driveBase.getWheelBaseDiagonal();
+        double omega = x * TrcUtil.average(-rr[0], rf[0], lf[0], -lr[0]) + y * TrcUtil.average(lf[1], -rf[1], lr[1], -rr[1]);
+        double currTime = TrcUtil.getCurrentTime();
+        if (lastTime != null)
+        {
+            double dt = currTime - lastTime;
+            double rot = Math.toRadians(gyro.getZHeading().value);
+            this.x += dt * (vx * Math.cos(rot) + vy * Math.sin(rot));
+            this.y += dt * (vy * Math.cos(rot) - vx * Math.sin(rot));
+            this.heading += Math.toDegrees(omega) * dt;
+            System.out.printf("\rx=%.2f,y=%.2f,rot=%.2f", this.x, this.y, Math.toDegrees(rot));
+        }
+        lastTime = currTime;
     }
 
     private static class SwerveStatus
