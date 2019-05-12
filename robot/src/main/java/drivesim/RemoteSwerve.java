@@ -64,8 +64,6 @@ public class RemoteSwerve
         rfModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), rfActuator);
         lrModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), lrActuator);
         rrModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), rrActuator);
-        Arrays.stream(new TrcSwerveModule[] { lfModule, rfModule, lrModule, rrModule })
-            .forEach(e -> e.setSteeringLimits(-170, 170));
 
         driveBase = new TrcSwerveDriveBase(lfModule, lrModule, rfModule, rrModule, gyro, width, length);
 
@@ -115,6 +113,7 @@ public class RemoteSwerve
         double x = driveBase.getWheelBaseWidth() / driveBase.getWheelBaseDiagonal();
         double y = driveBase.getWheelBaseLength() / driveBase.getWheelBaseDiagonal();
         double omega = x * TrcUtil.average(-rr[0], rf[0], lf[0], -lr[0]) + y * TrcUtil.average(lf[1], -rf[1], lr[1], -rr[1]);
+        omega *= Math.PI / 2;
         double currTime = TrcUtil.getCurrentTime();
         if (lastTime != null)
         {
@@ -123,7 +122,9 @@ public class RemoteSwerve
             this.x += dt * (vx * Math.cos(rot) + vy * Math.sin(rot));
             this.y += dt * (vy * Math.cos(rot) - vx * Math.sin(rot));
             this.heading += Math.toDegrees(omega) * dt;
-            System.out.printf("\rx=%.2f,y=%.2f,rot=%.2f", this.x, this.y, Math.toDegrees(rot));
+            this.heading = TrcUtil.modulo(this.heading, 360);
+            rot = Math.toDegrees(rot);
+            System.out.printf("\rx=%.2f,y=%.2f,rotPos=%.2f,gyro=%.2f,ratio=%.2f", this.x, this.y, this.heading, rot, rot / this.heading);
         }
         lastTime = currTime;
     }

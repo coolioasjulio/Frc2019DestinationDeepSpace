@@ -31,6 +31,7 @@ public class MockSwerveDriveBase extends TrcSwerveDriveBase
         odometry.xRawPos = x;
         odometry.yRawPos = y;
         odometry.gyroHeading = heading;
+        odometry.rotRawPos = heading;
         odometry.xRawVel = xVel;
         odometry.yRawVel = yVel;
     }
