@@ -67,7 +67,7 @@ public class RemotePP
 
         warpSpace = new TrcWarpSpace("warp", 0.0, 360.0);
 
-        purePursuit = new TrcHolonomicPurePursuitController("PurePursuit", driveBase, 1.0, 0.1,
+        purePursuit = new TrcHolonomicPurePursuitController("PurePursuit", driveBase, 1.0, 0.1, 5.0,
             new TrcPidController.PidCoefficients(0.2), new TrcPidController.PidCoefficients(0.006, 0.0, 0.0004),
             new TrcPidController.PidCoefficients(0.0, 0.0, 0.0, 1.0 / topSpeed));
 

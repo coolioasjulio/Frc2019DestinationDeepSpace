@@ -9,7 +9,7 @@ public class SimulatedMotorController extends TrcMotor
     private final TrcSensor.SensorData<Double> position;
     private volatile double power;
     private Thread monitorThread;
-    private double speed;
+    private volatile double speed;
 
     /**
      *
@@ -29,11 +29,11 @@ public class SimulatedMotorController extends TrcMotor
                     double currTime = TrcUtil.getCurrentTime();
                     double positionTime = position.timestamp;
                     if(currTime == positionTime) continue;
-                    speed = power * topSpeed;
-                    double positionChange = speed * (currTime - positionTime);
-                    double newPosition = position.value + positionChange;
+                    double newSpeed = power * topSpeed;
+                    double positionChange = TrcUtil.average(speed, newSpeed) * (currTime - positionTime);
+                    speed = newSpeed;
                     position.timestamp = currTime;
-                    position.value = newPosition;
+                    position.value += positionChange;
                 }
                 try
                 {

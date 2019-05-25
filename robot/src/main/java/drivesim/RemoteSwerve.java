@@ -10,7 +10,6 @@ import trclib.TrcSwerveModule;
 import trclib.TrcTaskMgr;
 import trclib.TrcUtil;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,10 +35,10 @@ public class RemoteSwerve
 
         this.gyro = gyro;
 
-        SimulatedMotorController lfMotor = new SimulatedMotorController(360);
-        SimulatedMotorController rfMotor = new SimulatedMotorController(360);
-        SimulatedMotorController lrMotor = new SimulatedMotorController(360);
-        SimulatedMotorController rrMotor = new SimulatedMotorController(360);
+        SimulatedMotorController lfMotor = new SimulatedMotorController(1080);
+        SimulatedMotorController rfMotor = new SimulatedMotorController(1080);
+        SimulatedMotorController lrMotor = new SimulatedMotorController(1080);
+        SimulatedMotorController rrMotor = new SimulatedMotorController(1080);
 
         TrcPidController lfCtrl = new TrcPidController("LFPID", pidCoefficients, turnTolerance, lfMotor::getPosition);
         TrcPidController rfCtrl = new TrcPidController("RFPID", pidCoefficients, turnTolerance, rfMotor::getPosition);
@@ -82,10 +81,10 @@ public class RemoteSwerve
         status.lrPower = (float) lrModule.getPower();
         status.rrPower = (float) rrModule.getPower();
 
-        status.lfAngle = (float) lfModule.getSteerAngle();
-        status.rfAngle = (float) rfModule.getSteerAngle();
-        status.lrAngle = (float) lrModule.getSteerAngle();
-        status.rrAngle = (float) rrModule.getSteerAngle();
+        status.lfAngle = (float) lfModule.getTargetSteerAngle();
+        status.rfAngle = (float) rfModule.getTargetSteerAngle();
+        status.lrAngle = (float) lrModule.getTargetSteerAngle();
+        status.rrAngle = (float) rrModule.getTargetSteerAngle();
 
         taskMgr.executeTaskType(TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK, TrcRobot.RunMode.TELEOP_MODE);
 
