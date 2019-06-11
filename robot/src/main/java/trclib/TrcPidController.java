@@ -22,8 +22,6 @@
 
 package trclib;
 
-import hallib.HalDashboard;
-
 import java.util.EmptyStackException;
 import java.util.Stack;
 
@@ -128,7 +126,6 @@ public class TrcPidController
 
     public static final double DEF_SETTLING_TIME = 0.2;
 
-    private HalDashboard dashboard;
     private String instanceName;
     private PidCoefficients pidCoefficients;
     private double tolerance;
@@ -179,8 +176,6 @@ public class TrcPidController
                 TrcDbgTrace.getGlobalTracer() :
                 new TrcDbgTrace(moduleName + "." + instanceName, tracingEnabled, traceLevel, msgLevel);
         }
-
-        dashboard = HalDashboard.getInstance();
         this.instanceName = instanceName;
         this.pidCoefficients = pidCoefficients;
         this.tolerance = Math.abs(tolerance);
@@ -223,9 +218,6 @@ public class TrcPidController
      */
     public void displayPidInfo(int lineNum)
     {
-        dashboard
-            .displayPrintf(lineNum, "%s:Target=%.1f,Input=%.1f,Error=%.1f", instanceName, setPoint, input, currError);
-        dashboard.displayPrintf(lineNum + 1, "minOutput=%.1f,Output=%.1f,maxOutput=%.1f", minOutput, output, maxOutput);
     }   //displayPidInfo
 
     /**
