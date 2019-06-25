@@ -33,10 +33,10 @@ public class RemotePP
         TrcPidController.PidCoefficients pidCoefficients = new TrcPidController.PidCoefficients(0.02);
         double turnTolerance = 1;
 
-        SimulatedMotorController lfMotor = new SimulatedMotorController(360);
-        SimulatedMotorController rfMotor = new SimulatedMotorController(360);
-        SimulatedMotorController lrMotor = new SimulatedMotorController(360);
-        SimulatedMotorController rrMotor = new SimulatedMotorController(360);
+        SimulatedMotorController lfMotor = new SimulatedMotorController(720);
+        SimulatedMotorController rfMotor = new SimulatedMotorController(720);
+        SimulatedMotorController lrMotor = new SimulatedMotorController(720);
+        SimulatedMotorController rrMotor = new SimulatedMotorController(720);
 
         TrcPidController lfCtrl = new TrcPidController("LFPID", pidCoefficients, turnTolerance, lfMotor::getPosition);
         TrcPidController rfCtrl = new TrcPidController("RFPID", pidCoefficients, turnTolerance, rfMotor::getPosition);
@@ -67,9 +67,10 @@ public class RemotePP
 
         warpSpace = new TrcWarpSpace("warp", 0.0, 360.0);
 
-        purePursuit = new TrcHolonomicPurePursuitController("PurePursuit", driveBase, 1.0, 0.1, 5.0,
+        purePursuit = new TrcHolonomicPurePursuitController("PurePursuit", driveBase, 1.0, 0.5, 5.0,
             new TrcPidController.PidCoefficients(0.2), new TrcPidController.PidCoefficients(0.006, 0.0, 0.0004),
             new TrcPidController.PidCoefficients(0.0, 0.0, 0.0, 1.0 / topSpeed));
+        purePursuit.setMaintainHeading(true);
 
         taskMgr = TrcTaskMgr.getInstance();
     }
@@ -79,8 +80,10 @@ public class RemotePP
         purePursuit.start(new TrcPath(true,
             new TrcWaypoint(0.1, 0, 0, 0.0, 0.0, 0, 0, 0),
             new TrcWaypoint(0.1, 0, 1, 0.0, 2.5, 0, 0, 0),
-            new TrcWaypoint(0.1, 0, 20, 0.0, 2.5, 0, 0, 90),
-            new TrcWaypoint(0.1, 0, 21, 0.0, 0.0, 0, 0, 90)));
+            new TrcWaypoint(0.1, 0, 5, 0.0, 2.5, 0, 0, 0),
+            new TrcWaypoint(0.1, 5, 5, 0.0, 2.5, 0, 0, 0),
+            new TrcWaypoint(0.1, 5, 8, 0.0, 2.5, 0, 0, 0),
+            new TrcWaypoint(0.1, 5, 10, 0.0, 0, 0, 0, 0)));
     }
 
     public SwerveStatus getStatus(double x, double y, double heading, double xVel, double yVel)
