@@ -33,21 +33,16 @@ import java.util.HashMap;
  */
 public class TrcOwnershipManager
 {
-    private static TrcOwnershipManager instance = null;
+    private static TrcOwnershipManager instance = new TrcOwnershipManager();
     private HashMap<TrcExclusiveSubsystem, String> ownershipMap;
 
     /**
      * This method is called to get the instance of the Ownership manager.
      *
-     * @return instance of the ownership manager if it already exists, otherwise an instance is created.
+     * @return instance of the ownership manager.
      */
-    public static synchronized TrcOwnershipManager getInstance()
+    public static TrcOwnershipManager getInstance()
     {
-        if (instance == null)
-        {
-            instance = new TrcOwnershipManager();
-        }
-
         return instance;
     }   //getInstance
 
@@ -70,7 +65,14 @@ public class TrcOwnershipManager
     }   //getOwner
 
     /**
-     * This method checks if the caller has exclusive ownership of the subsystem.
+     * This method checks if the caller has exclusive ownership of the subsystem. For backward compatibility with
+     * older code that's not aware of subsystem exclusive ownership, the owner parameter can be null. If the
+     * subsystem has no owner currently and the caller is not aware of exclusive ownership, the caller is considered
+     * to have acquired ownership. This means the caller is allowed to proceed with controlling the subsystem but if
+     * a new caller comes in and acquires the ownership of the subsystem while an operation is in progress, the
+     * operation will be interrupted and preempted by the new caller's operation. Therefore, callers unaware of
+     * exclusive ownership can start an operation on the subsystem but their operations are not guaranteed exclusive
+     * ownership.
      *
      * @param owner specifies the ID string of the caller, can be null if caller is unaware of exclusive ownership.
      * @return true if caller has exclusive ownership of the subsystem, false otherwise.
@@ -79,11 +81,20 @@ public class TrcOwnershipManager
     {
         String currOwner = getOwner(subsystem);
 
-        return owner == null && currOwner == null || currOwner != null && owner != null && currOwner.equals(owner);
+        return owner == null && currOwner == null || currOwner != null && currOwner.equals(owner);
     }   //hasOwnership
 
     /**
      * This method checks if the caller has exclusive ownership of the subsystem. If not, it throws an exception.
+     * It throws an exception only if the caller is aware of exclusive ownership and the it doesn't currently own
+     * the subsystem. If the caller is unaware of exclusive ownership and the subsystem is owned by somebody else,
+     * it will just return false and not throw an exception. This is to ensure older code that's unaware of exclusive
+     * ownership will not hit an unexpected exception and will just fail quietly.
+     *
+     * @param owner specifies the ID string of the caller, can be null if caller is unaware of exclusive ownership.
+     * @param subsystem specifies the subsystem to be checked of its ownership.
+     * @return true if the caller currently owns the subsystem, false otherwise.
+     * @throws IllegalStateException
      */
     public synchronized boolean validateOwnership(String owner, TrcExclusiveSubsystem subsystem)
     {
@@ -109,12 +120,12 @@ public class TrcOwnershipManager
         boolean success = false;
         String currOwner = ownershipMap.get(subsystem);
 
-        if (!ownershipMap.containsKey(subsystem))
+        if (currOwner == null)
         {
             ownershipMap.put(subsystem, owner);
             success = true;
         }
-        else if (currOwner != null && currOwner.equals(owner))
+        else if (currOwner.equals(owner))
         {
             success = true;
         }
@@ -130,15 +141,7 @@ public class TrcOwnershipManager
      */
     public synchronized boolean releaseOwnership(String owner, TrcExclusiveSubsystem subsystem)
     {
-        boolean success = false;
-
-        if (hasOwnership(owner, subsystem))
-        {
-            ownershipMap.remove(subsystem);
-            success = true;
-        }
-
-        return success;
+        return ownershipMap.remove(subsystem) != null;
     }   //releaseOwnership
 
 }   //class TrcOwnershipManager
