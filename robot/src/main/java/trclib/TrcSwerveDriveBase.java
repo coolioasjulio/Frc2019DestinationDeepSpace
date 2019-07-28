@@ -22,18 +22,22 @@
 
 package trclib;
 
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealVector;
+
 /**
  * This class implements a platform independent swerve drive base. A swerve drive base consists of 4 swerve modules
  * each of which consists of a driving motor and a PID controlled steering motor. It extends the TrcSimpleDriveBase
  * class so it inherits all the SimpleDriveBase methods and features
- *
+ * <p>
  * The implementation of swerve algorithm is based on Ether's white paper:
- *  http://www.chiefdelphi.com/media/papers/download/3028
+ * http://www.chiefdelphi.com/media/papers/download/3028
  */
 public class TrcSwerveDriveBase extends TrcSimpleDriveBase
 {
     private final TrcSwerveModule lfModule, rfModule, lrModule, rrModule;
     private final double wheelBaseWidth, wheelBaseLength, wheelBaseDiagonal;
+    private double[] lastWheelPos = new double[4];
 
     /**
      * Constructor: Create an instance of the 4-wheel swerve drive base.
@@ -47,7 +51,8 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
      * @param wheelBaseLength specifies the length of the wheel base in inches.
      */
     public TrcSwerveDriveBase(TrcSwerveModule leftFrontMotor, TrcSwerveModule leftRearMotor,
-        TrcSwerveModule rightFrontMotor, TrcSwerveModule rightRearMotor, TrcGyro gyro, double wheelBaseWidth, double wheelBaseLength)
+        TrcSwerveModule rightFrontMotor, TrcSwerveModule rightRearMotor, TrcGyro gyro, double wheelBaseWidth,
+        double wheelBaseLength)
     {
         super(leftFrontMotor, leftRearMotor, rightFrontMotor, rightRearMotor, gyro);
 
@@ -113,30 +118,35 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
         return true;
     }   //supportsHolonomicDrive
 
+    @Override
+    public void setPositionScales(double xScale, double yScale, double rotScale)
+    {
+        if (xScale != yScale)
+        {
+            throw new IllegalArgumentException("Swerve does not have different x and y scales!");
+        }
+
+        this.xScale = xScale;
+        this.yScale = yScale;
+        this.rotScale = rotScale;
+    }
+
     /**
      * This method sets the position scales. The raw position from the encoder is in encoder counts. By setting the
      * scale factor, one could make getPosition to return unit in inches, for example. This also automatically
      * calculates the rotateScale, which is used for approximating the heading without the gyro.
      *
-     * @param xScale specifies the X position scale.
-     * @param yScale specifies the Y position scale.
+     * @param scale specifies the position scale for each motor.
      */
-    @Override
-    public void setPositionScales(double xScale, double yScale)
+    public void setPositionScale(double scale)
     {
-        // encDist / perimeter = rotPos / 360.0
-        // encDist * 360.0 / perimeter = rotPos
-        // Therefore, rotScale = 360.0 / perimeter
-        double perimeter = wheelBaseDiagonal * Math.PI;
-        double rotScale = 360.0 / perimeter;
-
-        super.setPositionScales(xScale, yScale, rotScale);
+        setPositionScales(scale, scale, 1.0);
     }   //setPositionScales
 
     /**
      * This method sets the steering angle of all four wheels.
      *
-     * @param angle specifies the steering angle to be set.
+     * @param angle    specifies the steering angle to be set.
      * @param optimize specifies true to optimize steering angle to be no greater than 90 degrees, false otherwise.
      */
     public void setSteerAngle(double angle, boolean optimize)
@@ -208,9 +218,9 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
      * move diagonally initially. If this is undesirable, the caller should make sure steering angles are already at
      * zero before calling this method.
      *
-     * @param leftPower specifies left power value.
+     * @param leftPower  specifies left power value.
      * @param rightPower specifies right power value.
-     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
+     * @param inverted   specifies true to invert control (i.e. robot front becomes robot back).
      */
     @Override
     public void tankDrive(double leftPower, double rightPower, boolean inverted)
@@ -224,10 +234,10 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
      * controls how fast the robot will go in the y direction. Rotation controls how fast the robot rotates and
      * gyroAngle specifies the heading the robot should maintain.
      *
-     * @param x specifies the x power.
-     * @param y specifies the y power.
-     * @param rotation specifies the rotating power.
-     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
+     * @param x         specifies the x power.
+     * @param y         specifies the y power.
+     * @param rotation  specifies the rotating power.
+     * @param inverted  specifies true to invert control (i.e. robot front becomes robot back).
      * @param gyroAngle specifies the gyro angle to maintain for field relative drive. DO NOT use this with inverted.
      */
     @Override
@@ -237,8 +247,8 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
 
         if (debugEnabled)
         {
-            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API, "x=%f,y=%f,rot=%f,inverted=%s,angle=%f",
-                                x, y, rotation, Boolean.toString(inverted), gyroAngle);
+            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API, "x=%f,y=%f,rot=%f,inverted=%s,angle=%f", x, y,
+                rotation, Boolean.toString(inverted), gyroAngle);
         }
 
         if (x == 0.0 && y == 0.0 && rotation == 0.0)
@@ -259,18 +269,18 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
             y = TrcUtil.clipRange(y);
             rotation = TrcUtil.clipRange(rotation);
 
-            if(inverted)
+            if (inverted)
             {
                 x = -x;
                 y = -y;
             }
 
-            if(gyroAngle != 0)
+            if (gyroAngle != 0)
             {
-                if(inverted)
+                if (inverted)
                 {
-                    globalTracer.traceWarn(
-                        funcName, "You should not be using inverted and field reference frame at the same time!");
+                    globalTracer.traceWarn(funcName,
+                        "You should not be using inverted and field reference frame at the same time!");
                 }
 
                 double gyroRadians = Math.toRadians(gyroAngle);
@@ -279,10 +289,10 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
                 y = temp;
             }
 
-            double a = x - (rotation * wheelBaseLength/wheelBaseDiagonal);
-            double b = x + (rotation * wheelBaseLength/wheelBaseDiagonal);
-            double c = y - (rotation * wheelBaseWidth/wheelBaseDiagonal);
-            double d = y + (rotation * wheelBaseWidth/wheelBaseDiagonal);
+            double a = x - (rotation * wheelBaseLength / wheelBaseDiagonal);
+            double b = x + (rotation * wheelBaseLength / wheelBaseDiagonal);
+            double c = y - (rotation * wheelBaseWidth / wheelBaseDiagonal);
+            double d = y + (rotation * wheelBaseWidth / wheelBaseDiagonal);
 
             // The white paper goes in order rf, lf, lr, rr. We like to do lf, rf, lr, rr.
             // Note: atan2(y, x) in java will take care of x being zero.
@@ -330,13 +340,13 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
     }   //holonomicDrive
 
     /**
-     * This method is called periodically to monitor the position sensors to update the odometry data. It assumes the
-     * caller has the odometry lock.
+     * This method is called periodically to monitor the position sensors to update the odometry data.
      *
-     * @param odometry specifies the odometry object to be updated.
+     * @param motorValues specifies the MotorValues object containing the relevant data to calculate pose.
+     * @return A TrcPose2D object describing the change in position since the last update.
      */
     @Override
-    protected void updateOdometry(Odometry odometry)
+    protected TrcPose2D updateOdometry(MotorValues motorValues)
     {
         final String funcName = "updateOdometry";
 
@@ -345,39 +355,62 @@ public class TrcSwerveDriveBase extends TrcSimpleDriveBase
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.TASK);
         }
 
-        double lfAngle = lfModule.getSteerAngle();
-        double rfAngle = rfModule.getSteerAngle();
-        double lrAngle = lrModule.getSteerAngle();
-        double rrAngle = rrModule.getSteerAngle();
+        TrcSwerveModule[] modules = new TrcSwerveModule[] { lfModule, rfModule, lrModule, rrModule };
+        RealVector[] wheelVectors = new RealVector[4];
+        RealVector[] wheelVelocities = new RealVector[4];
+        for (int i = 0; i < modules.length; i++)
+        {
+            double angle = modules[i].getSteerAngle();
+            double pos = modules[i].getPosition();
+            double posDiff = pos - lastWheelPos[i];
+            lastWheelPos[i] = pos;
+            wheelVectors[i] = TrcUtil.polarToCartesian(posDiff, angle).mapMultiply(xScale); // x and y scales are same
+            wheelVelocities[i] = TrcUtil.polarToCartesian(modules[i].getVelocity(), angle).mapMultiply(xScale);
+        }
 
-        double avgAngleDeg = TrcUtil.average(lfAngle, rfAngle, lrAngle, rrAngle);
-        double avgAngleRad = Math.toRadians(avgAngleDeg);
-        double angleCos = Math.cos(avgAngleRad);
-        double angleSin = Math.sin(avgAngleRad);
+        RealVector posSum = new ArrayRealVector(2);
+        RealVector velSum = new ArrayRealVector(2);
+        for (int i = 0; i < 4; i++)
+        {
+            posSum = posSum.add(wheelVectors[i]);
+            velSum = velSum.add(wheelVelocities[i]);
+        }
 
-        double timeDelta = odometry.currTimestamp - odometry.prevTimestamp;
-        double avgEncDelta = TrcUtil.average(
-                odometry.currPositions[MotorType.LEFT_FRONT.value] - odometry.prevPositions[MotorType.LEFT_FRONT.value],
-                odometry.currPositions[MotorType.RIGHT_FRONT.value] - odometry.prevPositions[MotorType.RIGHT_FRONT.value],
-                odometry.currPositions[MotorType.LEFT_REAR.value] - odometry.prevPositions[MotorType.LEFT_REAR.value],
-                odometry.currPositions[MotorType.RIGHT_REAR.value] - odometry.prevPositions[MotorType.RIGHT_REAR.value]);
-        double avgEncVel = timeDelta != 0.0 ? avgEncDelta / timeDelta : 0.0;
+        posSum.mapMultiplyToSelf(0.25);
+        velSum.mapMultiplyToSelf(0.25);
 
-        odometry.xRawPos = getRawXPosition() + avgEncDelta*angleCos;
-        odometry.xRawVel = avgEncVel*angleCos;
-        odometry.yRawPos = getRawYPosition() + avgEncDelta*angleSin;
-        odometry.yRawVel = avgEncVel*angleSin;
-        //
-        // Rotation position is only valid when the robot is doing turn-in-place.
-        // In Swerve Drive, the wheels are steered in a diamond formation (i.e. tangential to the turning circle).
-        // So the rotation position is the degree turned by the robot in the turning circle.
-        //
-        odometry.rotRawPos = getRawRotationPosition() + avgEncDelta;
+        TrcPose2D odometry = new TrcPose2D();
+
+        odometry.x = posSum.getEntry(0);
+        odometry.y = posSum.getEntry(1);
+
+        odometry.xVel = velSum.getEntry(0);
+        odometry.yVel = velSum.getEntry(1);
+
+        double x = wheelBaseWidth / 2;
+        double y = wheelBaseLength / 2;
+        // This is black magic math, and it actually needs to be tested.
+        double dRot = x * (wheelVectors[0].getEntry(1) + wheelVectors[2].getEntry(1) - wheelVectors[1].getEntry(1)
+            - wheelVectors[3].getEntry(1)) + y * (wheelVectors[0].getEntry(0) + wheelVectors[1].getEntry(0)
+            - wheelVectors[2].getEntry(0) - wheelVectors[3].getEntry(0));
+        dRot /= 4 * Math.pow(wheelBaseDiagonal, 2);
+        dRot = Math.toDegrees(dRot);
+        odometry.heading = dRot;
+
+        double rotVel =
+            x * (wheelVelocities[0].getEntry(1) + wheelVelocities[2].getEntry(1) - wheelVelocities[1].getEntry(1)
+                - wheelVelocities[3].getEntry(1)) + y * (wheelVelocities[0].getEntry(0) + wheelVelocities[1].getEntry(0)
+                - wheelVelocities[2].getEntry(0) - wheelVelocities[3].getEntry(0));
+        rotVel /= 4 * Math.pow(wheelBaseDiagonal, 2);
+        rotVel = Math.toDegrees(rotVel);
+        odometry.turnRate = rotVel;
 
         if (debugEnabled)
         {
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.TASK);
         }
+
+        return odometry;
     }   //updateOdometry
 
 }   //class TrcSwerveDriveBase
