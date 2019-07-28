@@ -1,5 +1,6 @@
 package drivesim;
 
+import trclib.TrcPose2D;
 import trclib.TrcSwerveDriveBase;
 import trclib.TrcSwerveModule;
 
@@ -26,13 +27,14 @@ public class MockSwerveDriveBase extends TrcSwerveDriveBase
     }
 
     @Override
-    protected void updateOdometry(Odometry odometry)
+    protected TrcPose2D updateOdometry(MotorValues motorValues)
     {
-        odometry.xRawPos = x;
-        odometry.yRawPos = y;
-        odometry.gyroHeading = heading;
-        odometry.rotRawPos = heading;
-        odometry.xRawVel = xVel;
-        odometry.yRawVel = yVel;
+        odometry.x = x;
+        odometry.y = y;
+        odometry.heading = heading;
+        odometry.turnRate = heading;
+        odometry.xVel = xVel;
+        odometry.yVel = yVel;
+        return new TrcPose2D();
     }
 }

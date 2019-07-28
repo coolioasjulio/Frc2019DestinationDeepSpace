@@ -1,30 +1,37 @@
 package drivesim;
 
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.RealVector;
 import trclib.TrcDigitalInput;
 import trclib.TrcGyro;
 import trclib.TrcPidActuator;
 import trclib.TrcPidController;
+import trclib.TrcPose2D;
 import trclib.TrcRobot;
 import trclib.TrcSwerveDriveBase;
 import trclib.TrcSwerveModule;
 import trclib.TrcTaskMgr;
 import trclib.TrcUtil;
 
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class RemoteSwerve
 {
+    private static final double DRIVE_SPEED = 3600;
+
     private final TrcGyro gyro;
     private final TrcSwerveModule lfModule;
     private final TrcSwerveModule rfModule;
     private final TrcSwerveModule lrModule;
     private final TrcSwerveModule rrModule;
+    private SimulatedMotorController lfDrive, rfDrive, lrDrive, rrDrive;
     private final TrcSwerveDriveBase driveBase;
     private final TrcTaskMgr taskMgr;
     private Double lastTime;
-    private double x, y, heading;
+    private TrcPose2D odometry;
+    private final RealVector[] velocities;
 
     public RemoteSwerve(double width, double length, TrcGyro gyro)
     {
@@ -34,6 +41,10 @@ public class RemoteSwerve
         double turnTolerance = 1;
 
         this.gyro = gyro;
+
+        velocities = IntStream.range(0, 4).mapToObj(e -> new ArrayRealVector(new double[] { 0, 0 }))
+            .toArray(RealVector[]::new);
+        odometry = new TrcPose2D();
 
         SimulatedMotorController lfMotor = new SimulatedMotorController(1080);
         SimulatedMotorController rfMotor = new SimulatedMotorController(1080);
@@ -59,10 +70,15 @@ public class RemoteSwerve
         TrcPidActuator lrActuator = new TrcPidActuator("LR_ACT", lrMotor, in, lrCtrl, 0.1);
         TrcPidActuator rrActuator = new TrcPidActuator("RR_ACT", rrMotor, in, rrCtrl, 0.1);
 
-        lfModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), lfActuator);
-        rfModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), rfActuator);
-        lrModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), lrActuator);
-        rrModule = new TrcSwerveModule("lfModule", new SimulatedMotorController(3600), rrActuator);
+        lfDrive = new SimulatedMotorController(3600);
+        rfDrive = new SimulatedMotorController(3600);
+        lrDrive = new SimulatedMotorController(3600);
+        rrDrive = new SimulatedMotorController(3600);
+
+        lfModule = new TrcSwerveModule("lfModule", lfDrive, lfActuator);
+        rfModule = new TrcSwerveModule("lfModule", rfDrive, rfActuator);
+        lrModule = new TrcSwerveModule("lfModule", lrDrive, lrActuator);
+        rrModule = new TrcSwerveModule("lfModule", rrDrive, rrActuator);
 
         driveBase = new TrcSwerveDriveBase(lfModule, lrModule, rfModule, rrModule, gyro, width, length);
 
@@ -93,39 +109,119 @@ public class RemoteSwerve
 
     public void updateOdometry(double lfSpeed, double rfSpeed, double lrSpeed, double rrSpeed)
     {
-        double[] wheels = new double[] { lfSpeed, rfSpeed, lrSpeed, rrSpeed };
-        double[] angles = new double[] { lfModule.getSteerAngle(), rfModule.getSteerAngle(), lrModule.getSteerAngle(),
-            rrModule.getSteerAngle() };
-        List<double[]> vectors = IntStream.range(0, 4)
-            .mapToObj(
-                i -> new double[] {
-                    wheels[i] * Math.sin(Math.toRadians(angles[i])),
-                    wheels[i] * Math.cos(Math.toRadians(angles[i])) })
-            .collect(Collectors.toList());
-
-        double vx = vectors.stream().mapToDouble(e -> e[0]).average().orElse(0.0);
-        double vy = vectors.stream().mapToDouble(e -> e[1]).average().orElse(0.0);
-        double[] lf = vectors.get(0);
-        double[] rf = vectors.get(1);
-        double[] lr = vectors.get(2);
-        double[] rr = vectors.get(3);
-        double x = driveBase.getWheelBaseWidth() / driveBase.getWheelBaseDiagonal();
-        double y = driveBase.getWheelBaseLength() / driveBase.getWheelBaseDiagonal();
-        double omega = x * TrcUtil.average(-rr[0], rf[0], lf[0], -lr[0]) + y * TrcUtil.average(lf[1], -rf[1], lr[1], -rr[1]);
-        omega *= Math.PI / 2;
         double currTime = TrcUtil.getCurrentTime();
-        if (lastTime != null)
+        if (lastTime == null)
         {
-            double dt = currTime - lastTime;
-            double rot = Math.toRadians(gyro.getZHeading().value);
-            this.x += dt * (vx * Math.cos(rot) + vy * Math.sin(rot));
-            this.y += dt * (vy * Math.cos(rot) - vx * Math.sin(rot));
-            this.heading += Math.toDegrees(omega) * dt;
-            this.heading = TrcUtil.modulo(this.heading, 360);
-            rot = Math.toDegrees(rot);
-            System.out.printf("\rx=%.2f,y=%.2f,rotPos=%.2f,gyro=%.2f,ratio=%.2f", this.x, this.y, this.heading, rot, rot / this.heading);
+            lastTime = currTime;
+            return;
         }
+        double dt = currTime - lastTime;
         lastTime = currTime;
+
+        TrcSwerveModule[] modules = new TrcSwerveModule[] { lfModule, rfModule, lrModule, rrModule };
+        RealVector[] wheelVectors = new RealVector[4];
+        double[] wheelVels = new double[] { lfSpeed, rfSpeed, lrSpeed, rrSpeed };
+        for (int i = 0; i < modules.length; i++)
+        {
+            double angle = modules[i].getSteerAngle();
+            RealVector vel = TrcUtil.polarToCartesian(wheelVels[i], angle);
+            wheelVectors[i] = vel.add(velocities[i]).mapMultiply(0.5).mapMultiply(dt);
+            velocities[i] = vel;
+        }
+
+        RealVector posSum = new ArrayRealVector(2);
+        RealVector velSum = new ArrayRealVector(2);
+        for (int i = 0; i < 4; i++)
+        {
+            posSum = posSum.add(wheelVectors[i]);
+            velSum = velSum.add(velocities[i]);
+        }
+
+        posSum.mapMultiplyToSelf(0.25);
+        velSum.mapMultiplyToSelf(0.25);
+
+        TrcPose2D odometry = new TrcPose2D();
+
+        odometry.x = posSum.getEntry(0);
+        odometry.y = posSum.getEntry(1);
+
+        odometry.xVel = velSum.getEntry(0);
+        odometry.yVel = velSum.getEntry(1);
+
+        double wheelBaseWidth = driveBase.getWheelBaseWidth();
+        double wheelBaseLength = driveBase.getWheelBaseLength();
+        double wheelBaseDiagonal = driveBase.getWheelBaseDiagonal();
+
+        double x = wheelBaseWidth / 2;
+        double y = wheelBaseLength / 2;
+        // This is black magic math, and it actually needs to be tested.
+        double dRot = x * (wheelVectors[0].getEntry(1) + wheelVectors[2].getEntry(1) - wheelVectors[1].getEntry(1)
+            - wheelVectors[3].getEntry(1)) + y * (wheelVectors[0].getEntry(0) + wheelVectors[1].getEntry(0)
+            - wheelVectors[2].getEntry(0) - wheelVectors[3].getEntry(0));
+        dRot /= 4 * Math.pow(wheelBaseDiagonal, 2);
+        dRot = Math.toDegrees(dRot);
+        odometry.heading = dRot;
+
+        double rotVel =
+            x * (velocities[0].getEntry(1) + velocities[2].getEntry(1) - velocities[1].getEntry(1) - velocities[3]
+                .getEntry(1)) + y * (velocities[0].getEntry(0) + velocities[1].getEntry(0) - velocities[2].getEntry(0)
+                - velocities[3].getEntry(0));
+        rotVel /= 4 * Math.pow(wheelBaseDiagonal, 2);
+        rotVel = Math.toDegrees(rotVel);
+        odometry.turnRate = rotVel;
+
+        double heading = gyro.getZHeading().value;
+        odometry.heading = heading - this.odometry.heading;
+
+        updatePose(odometry, this.odometry.heading);
+        System.out.printf("\rx=%.2f,y=%.2f,heading=%.2f", this.odometry.x, this.odometry.y, this.odometry.heading);
+    }
+
+    private void updatePose(TrcPose2D poseDelta, double heading)
+    {
+        // The math below uses a different coordinate system (NWU) so we have to convert
+        RealMatrix changeOfBasis = MatrixUtils.createRealMatrix(new double[][] { { 0, 1 }, { -1, 0 } });
+        double[] posArr = changeOfBasis.operate(new double[] { poseDelta.x, poseDelta.y });
+        double x = posArr[0];
+        double y = posArr[1];
+        // Convert clockwise degrees to counter-clockwise radians
+        double theta = Math.toRadians(-poseDelta.heading);
+        double headingRad = Math.toRadians(-heading);
+
+        // The following black magic has been ripped straight out of some book (https://file.tavsys.net/control/state-space-guide.pdf)
+        RealMatrix A = MatrixUtils.createRealMatrix(new double[][] { { Math.cos(headingRad), -Math.sin(headingRad), 0 },
+            { Math.sin(headingRad), Math.cos(headingRad), 0 }, { 0, 0, 1 } });
+        RealMatrix B;
+        if (Math.abs(theta) <= 1E-9)
+        {
+            // Use the taylor series approximations, since some values are indeterminate
+            B = MatrixUtils.createRealMatrix(new double[][] { { 1 - theta * theta / 6.0, -theta / 2.0, 0 },
+                { theta / 2.0, 1 - theta * theta / 6.0, 0 }, { 0, 0, 1 } });
+        }
+        else
+        {
+            B = MatrixUtils.createRealMatrix(new double[][] { { Math.sin(theta), Math.cos(theta) - 1, 0 },
+                { 1 - Math.cos(theta), Math.sin(theta), 0 }, { 0, 0, theta } });
+            B = B.scalarMultiply(1.0 / theta);
+        }
+        RealVector C = MatrixUtils.createRealVector(new double[] { x, y, theta });
+        RealVector globalPose = A.multiply(B).operate(C);
+        // Convert back to our (ENU) reference frame
+        RealVector pos = changeOfBasis.transpose().operate(globalPose.getSubVector(0, 2));
+        // Convert back to clockwise degrees for heading
+        theta = Math.toDegrees(-globalPose.getEntry(2));
+
+        // Rotate the velocity vector into the global reference frame
+        RealVector vel = MatrixUtils.createRealVector(new double[] { poseDelta.xVel, poseDelta.yVel });
+        vel = TrcUtil.rotateCW(vel, heading);
+
+        // Update the odometry values
+        odometry.x += pos.getEntry(0);
+        odometry.y += pos.getEntry(1);
+        odometry.xVel = vel.getEntry(0);
+        odometry.yVel = vel.getEntry(1);
+        odometry.heading += theta;
+        odometry.turnRate = poseDelta.turnRate;
     }
 
     private static class SwerveStatus
