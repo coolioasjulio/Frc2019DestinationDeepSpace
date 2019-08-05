@@ -425,7 +425,7 @@ public abstract class TrcMotor implements TrcMotorController
      *                                     motor stall torque.
      * @return power percentage to apply to the motor to generate the desired torque (to the best ability of the motor).
      */
-    private double transformTorqueToMotorPower(double desiredStallTorquePercentage)
+    protected double transformTorqueToMotorPower(double desiredStallTorquePercentage)
     {
         final String funcName = "transformTorqueToMotorPower";
         double power;
