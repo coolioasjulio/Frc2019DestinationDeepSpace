@@ -327,14 +327,6 @@ public class TrcPidController
         this.inverted = inverted;
     }   //setInverted
 
-    public double getInput() {
-        return getInput(true);
-    }
-
-    public double getInput(boolean cached) {
-        return cached ? input : pidInput.get();
-    }
-
     /**
      * This method sets the set point mode to be absolute. PID controller always calculates the output with an
      * absolute set point comparing to a sensor value representing an absolute input. But by default, it will
