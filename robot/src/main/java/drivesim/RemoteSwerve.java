@@ -97,10 +97,17 @@ public class RemoteSwerve
         status.lrPower = (float) lrModule.getPower();
         status.rrPower = (float) rrModule.getPower();
 
-        status.lfAngle = (float) lfModule.getTargetSteerAngle();
-        status.rfAngle = (float) rfModule.getTargetSteerAngle();
-        status.lrAngle = (float) lrModule.getTargetSteerAngle();
-        status.rrAngle = (float) rrModule.getTargetSteerAngle();
+        try
+        {
+            status.lfAngle = TrcSwerveModule.class.getDeclaredField("prevSteerAngle").getFloat(lfModule);
+            status.rfAngle = TrcSwerveModule.class.getDeclaredField("prevSteerAngle").getFloat(rfModule);
+            status.lrAngle = TrcSwerveModule.class.getDeclaredField("prevSteerAngle").getFloat(lrModule);
+            status.rrAngle = TrcSwerveModule.class.getDeclaredField("prevSteerAngle").getFloat(rrModule);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
 
         taskMgr.executeTaskType(TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK, TrcRobot.RunMode.TELEOP_MODE);
 
@@ -148,9 +155,19 @@ public class RemoteSwerve
         odometry.xVel = velSum.getEntry(0);
         odometry.yVel = velSum.getEntry(1);
 
-        double wheelBaseWidth = driveBase.getWheelBaseWidth();
-        double wheelBaseLength = driveBase.getWheelBaseLength();
-        double wheelBaseDiagonal = driveBase.getWheelBaseDiagonal();
+        double wheelBaseWidth = 1;
+        double wheelBaseLength = 1;
+        double wheelBaseDiagonal = TrcUtil.magnitude(wheelBaseLength, wheelBaseWidth);
+        try
+        {
+            wheelBaseWidth = TrcSwerveDriveBase.class.getDeclaredField("wheelBaseWidth").getDouble(driveBase);
+            wheelBaseLength = TrcSwerveDriveBase.class.getDeclaredField("wheelBaseLength").getDouble(driveBase);
+            wheelBaseDiagonal = TrcSwerveDriveBase.class.getDeclaredField("wheelBaseDiagonal").getDouble(driveBase);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
 
         double x = wheelBaseWidth / 2;
         double y = wheelBaseLength / 2;

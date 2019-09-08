@@ -10,6 +10,8 @@ import trclib.TrcSwerveDriveBase;
 import trclib.TrcSwerveModule;
 import trclib.TrcTaskMgr;
 import trclib.TrcWarpSpace;
+
+import java.lang.reflect.Field;
 import java.util.Arrays;
 
 public class RemotePID
@@ -33,10 +35,10 @@ public class RemotePID
 
         TrcGyro gyro = new MockGyro("gyro");
 
-        SimulatedMotorController lfMotor = new SimulatedMotorController(360);
-        SimulatedMotorController rfMotor = new SimulatedMotorController(360);
-        SimulatedMotorController lrMotor = new SimulatedMotorController(360);
-        SimulatedMotorController rrMotor = new SimulatedMotorController(360);
+        SimulatedMotorController lfMotor = new SimulatedMotorController(720);
+        SimulatedMotorController rfMotor = new SimulatedMotorController(720);
+        SimulatedMotorController lrMotor = new SimulatedMotorController(720);
+        SimulatedMotorController rrMotor = new SimulatedMotorController(720);
 
         TrcPidController lfCtrl = new TrcPidController("LFPID", pidCoefficients, turnTolerance, lfMotor::getPosition);
         TrcPidController rfCtrl = new TrcPidController("RFPID", pidCoefficients, turnTolerance, rfMotor::getPosition);
@@ -66,15 +68,30 @@ public class RemotePID
 
         warpSpace = new TrcWarpSpace("warp", 0.0, 360.0);
 
-        TrcPidController xPid = new TrcPidController("xpid", new TrcPidController.PidCoefficients(0.1), 0.2, () -> x);
-        TrcPidController yPid = new TrcPidController("ypid", new TrcPidController.PidCoefficients(0.1), 0.2, () -> y);
-        TrcPidController turnPid = new TrcPidController("turnpid", new TrcPidController.PidCoefficients(0.004, 0.0, 0.0004), 2, () -> heading);
+        TrcPidController xPid = new TrcPidController("xpid", new TrcPidController.PidCoefficients(0.15), 0.1, () -> x);
+        TrcPidController yPid = new TrcPidController("ypid", new TrcPidController.PidCoefficients(0.15), 0.1, () -> y);
+        TrcPidController turnPid = new TrcPidController("turnpid", new TrcPidController.PidCoefficients(0.005, 0.0, 0.0004), 2, () -> heading);
         turnPid.setAbsoluteSetPoint(true);
 
         pidDrive = new TrcPidDrive("PID", driveBase, xPid, yPid, turnPid);
         pidDrive.setWarpSpaceEnabled(true);
 
         taskMgr = TrcTaskMgr.getInstance();
+    }
+
+    private float getTargetAngle(TrcSwerveModule module)
+    {
+        try
+        {
+            Field field = module.getClass().getDeclaredField("prevSteerAngle");
+            field.setAccessible(true);
+            return (float) field.getDouble(module);
+        }
+        catch (NoSuchFieldException | IllegalAccessException e)
+        {
+            e.printStackTrace();
+            return 0;
+        }
     }
 
     public void drive(double x, double y, double heading)
@@ -88,7 +105,8 @@ public class RemotePID
         this.y = y;
         this.heading = warpSpace.getOptimizedTarget(heading, this.heading);
 
-        Arrays.stream(TrcTaskMgr.TaskType.values()).skip(2).limit(4).forEach(e -> taskMgr.executeTaskType(e, TrcRobot.RunMode.TELEOP_MODE));
+        Arrays.stream(TrcTaskMgr.TaskType.values()).skip(2).limit(4)
+            .forEach(e -> taskMgr.executeTaskType(e, TrcRobot.RunMode.TELEOP_MODE));
 
         SwerveStatus status = new SwerveStatus();
         status.lfPower = (float) lfModule.getPower();
@@ -96,10 +114,17 @@ public class RemotePID
         status.lrPower = (float) lrModule.getPower();
         status.rrPower = (float) rrModule.getPower();
 
-        status.lfAngle = (float) lfModule.getSteerAngle();
-        status.rfAngle = (float) rfModule.getSteerAngle();
-        status.lrAngle = (float) lrModule.getSteerAngle();
-        status.rrAngle = (float) rrModule.getSteerAngle();
+        try
+        {
+            status.lfAngle = getTargetAngle(lfModule);
+            status.rfAngle = getTargetAngle(rfModule);
+            status.lrAngle = getTargetAngle(lrModule);
+            status.rrAngle = getTargetAngle(rrModule);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
 
         return status;
     }

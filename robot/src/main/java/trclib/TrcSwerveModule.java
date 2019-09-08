@@ -285,11 +285,6 @@ public class TrcSwerveModule implements TrcMotorController
         return angle;
     }   //getSteerAngle
 
-    public double getTargetSteerAngle()
-    {
-        return prevSteerAngle;
-    }
-
     //
     // Implements TrcMotorController interface.
     //
